@@ -5,16 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ArrowLeft, DollarSign, CalendarDays, FileText, MessageSquare, Paperclip } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 
-const categorias = [
-  'Material gráfico', 'Combustível', 'Pessoal', 'Aluguel',
-  'Mídia digital', 'Mídia tradicional (rádio/TV)', 'Eventos',
-  'Serviços (jurídico, contábil, etc.)', 'Outros'
-];
 
 export default function NovaContaPage() {
   const { usuario } = useAuth();
@@ -24,7 +18,7 @@ export default function NovaContaPage() {
   const [form, setForm] = useState({
     descricao: '',
     categoria: '',
-    subcategoria: '',
+    
     valor: '',
     data_emissao: '',
     data_vencimento: '',
@@ -61,7 +55,7 @@ export default function NovaContaPage() {
       .insert({
         descricao: form.descricao.trim(),
         categoria: form.categoria || null,
-        subcategoria: form.subcategoria.trim() || null,
+        
         valor: valorNum,
         data_emissao: form.data_emissao || null,
         data_vencimento: form.data_vencimento,
@@ -123,24 +117,10 @@ export default function NovaContaPage() {
 
           <div className="space-y-1">
             <label className="label-micro">Categoria</label>
-            <Select value={form.categoria} onValueChange={v => update('categoria', v)}>
-              <SelectTrigger className="h-12 bg-background">
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categorias.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="label-micro">Subcategoria</label>
             <Input
-              placeholder="Opcional"
-              value={form.subcategoria}
-              onChange={e => update('subcategoria', e.target.value)}
+              placeholder="Ex.: Material gráfico, Combustível, Pessoal..."
+              value={form.categoria}
+              onChange={e => update('categoria', e.target.value)}
               className="h-12 bg-background"
             />
           </div>
