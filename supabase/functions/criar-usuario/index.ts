@@ -24,22 +24,37 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
-    // Check if user already exists
+    // Check if user already exists in usuarios
     const { data: existing } = await supabaseAdmin
       .from('usuarios')
-      .select('id')
+      .select('id, auth_user_id')
       .eq('nome', nome)
       .single();
 
     if (existing) {
+      // User exists - update password
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        existing.auth_user_id,
+        { password: senha }
+      );
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        return new Response(
+          JSON.stringify({ error: 'Erro ao atualizar senha: ' + updateError.message }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
-        JSON.stringify({ error: 'Usuário já existe com esse nome' }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, message: 'Senha atualizada', usuario: existing }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create auth user with generated email
-    const email = `${nome.toLowerCase().replace(/[^a-z0-9]/g, '')}@campanha.internal`;
+    // Create new auth user with generated email
+    const timestamp = Date.now();
+    const email = `${nome.toLowerCase().replace(/[^a-z0-9]/g, '')}_${timestamp}@campanha.internal`;
     
     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -68,7 +83,6 @@ Deno.serve(async (req) => {
 
     if (userError) {
       console.error('Usuario insert error:', userError);
-      // Rollback auth user
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
       return new Response(
         JSON.stringify({ error: 'Erro ao criar registro de usuário' }),
