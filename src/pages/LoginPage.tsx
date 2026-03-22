@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
+import Hyperspeed from '@/components/Hyperspeed';
 
 const FOTO_URL = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699400706d955b03c8c19827/16e72069d_WhatsAppImage2026-02-17at023641.jpeg';
 
@@ -13,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [remember, setRemember] = useState(false);
   const { signInByNome } = useAuth();
   const navigate = useNavigate();
 
@@ -33,75 +36,163 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      {/* Gradient line top */}
-      <div className="gradient-header h-[1.5px] w-full fixed top-0 left-0" />
+    <div className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden" style={{ background: '#070510' }}>
+      {/* 3D Animated background */}
+      <Hyperspeed />
 
-      <div className="w-full max-w-sm space-y-6 animate-fade-in">
+      {/* Vignette overlay */}
+      <div
+        className="fixed inset-0 z-[1] pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(7,5,16,0.5) 100%)',
+        }}
+      />
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-sm px-4 space-y-6" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {/* Photo + branding */}
         <div className="text-center space-y-3">
-          <div className="w-28 h-28 rounded-full mx-auto overflow-hidden border-[3px] border-primary shadow-lg shadow-primary/20">
-            <img 
-              src={FOTO_URL} 
-              alt="Dra. Fernanda Sarelli" 
-              className="w-full h-full object-cover"
-            />
+          <div className="relative w-28 h-28 mx-auto">
+            <div
+              className="w-full h-full rounded-full p-[3px]"
+              style={{ background: 'linear-gradient(135deg, hsl(340 82% 55%), hsl(350 80% 60%), hsl(330 70% 50%))' }}
+            >
+              <div className="w-full h-full rounded-full overflow-hidden">
+                <img
+                  src={FOTO_URL}
+                  alt="Dra. Fernanda Sarelli"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+            {/* Online indicator */}
+            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#070510]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Contas a Pagar</h1>
-            <p className="text-sm text-muted-foreground">Campanha – Dra. Fernanda Sarelli</p>
+            <h1 className="text-xl font-bold text-white">Contas a Pagar</h1>
+            <p className="text-sm" style={{ color: 'hsl(340 82% 65%)' }}>
+              Campanha – Dra. Fernanda Sarelli
+            </p>
           </div>
         </div>
 
         {/* Login card */}
-        <form onSubmit={handleSubmit} className="section-card space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl p-5 space-y-4"
+          style={{
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 8px 32px hsl(340 82% 55% / 0.15)',
+          }}
+        >
           <div className="space-y-1">
-            <label className="label-micro">Nome de usuário</label>
+            <label className="text-[11px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Nome de usuário
+            </label>
             <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input
+              <User className="absolute left-3 top-1/2 -translate-y-1/2" size={18} style={{ color: 'rgba(255,255,255,0.25)' }} />
+              <input
                 type="text"
                 placeholder="Seu nome de acesso"
                 value={nome}
                 onChange={e => setNome(e.target.value)}
-                className="pl-10 h-12 bg-card border-border"
                 autoComplete="username"
+                className="w-full h-12 pl-10 pr-4 rounded-xl text-white placeholder:text-white/25 outline-none transition-all focus:ring-2"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontSize: '16px',
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'hsl(340, 82%, 55%)';
+                  e.target.style.boxShadow = '0 0 0 2px hsl(340 82% 55% / 0.3)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="label-micro">Senha</label>
+            <label className="text-[11px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Senha
+            </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-              <Input
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2" size={18} style={{ color: 'rgba(255,255,255,0.25)' }} />
+              <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="pl-10 pr-10 h-12 bg-card border-border"
                 autoComplete="current-password"
+                className="w-full h-12 pl-10 pr-12 rounded-xl text-white placeholder:text-white/25 outline-none transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  fontSize: '16px',
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'hsl(340, 82%, 55%)';
+                  e.target.style.boxShadow = '0 0 0 2px hsl(340 82% 55% / 0.3)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.boxShadow = 'none';
+                }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                style={{ color: 'rgba(255,255,255,0.25)', touchAction: 'manipulation' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.5)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          <Button
+          {/* Remember checkbox */}
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="remember"
+              checked={remember}
+              onCheckedChange={(v) => setRemember(v === true)}
+              className="border-white/20 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
+            />
+            <label htmlFor="remember" className="text-xs cursor-pointer" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Lembrar dados
+            </label>
+          </div>
+
+          <button
             type="submit"
             disabled={loading}
-            className="w-full h-12 gradient-primary text-primary-foreground font-semibold shadow-lg rounded-xl active:scale-[0.97] transition-transform"
+            className="w-full h-12 rounded-xl font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-60"
+            style={{
+              background: 'linear-gradient(135deg, hsl(340 82% 55%), hsl(350 80% 60%))',
+              boxShadow: '0 4px 20px hsl(340 82% 55% / 0.4)',
+              touchAction: 'manipulation',
+            }}
           >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </Button>
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Entrando...
+              </span>
+            ) : (
+              'Entrar'
+            )}
+          </button>
         </form>
 
-        <p className="text-micro text-center">
+        <p className="text-[10px] text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
           Sistema exclusivo para membros da campanha
         </p>
       </div>
