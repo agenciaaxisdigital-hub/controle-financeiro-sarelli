@@ -5,16 +5,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { toast } from 'sonner';
 import { ArrowLeft, DollarSign, CalendarDays, FileText, MessageSquare, Paperclip } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 
-const categorias = [
-  'Material gráfico', 'Combustível', 'Pessoal', 'Aluguel',
-  'Mídia digital', 'Mídia tradicional (rádio/TV)', 'Eventos',
-  'Serviços (jurídico, contábil, etc.)', 'Outros'
-];
 
 export default function NovaContaPage() {
   const { usuario } = useAuth();
