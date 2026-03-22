@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,9 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, DollarSign, CalendarDays, FileText, Building2, MessageSquare, Paperclip } from 'lucide-react';
+import { ArrowLeft, DollarSign, CalendarDays, FileText, MessageSquare, Paperclip } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
-import NewFornecedorDialog from '@/components/NewFornecedorDialog';
 
 const categorias = [
   'Material gráfico', 'Combustível', 'Pessoal', 'Aluguel',
@@ -17,17 +16,10 @@ const categorias = [
   'Serviços (jurídico, contábil, etc.)', 'Outros'
 ];
 
-interface Fornecedor {
-  id: string;
-  nome: string;
-}
-
 export default function NovaContaPage() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
-  const [showNewFornecedor, setShowNewFornecedor] = useState(false);
 
   const [form, setForm] = useState({
     descricao: '',
@@ -36,21 +28,11 @@ export default function NovaContaPage() {
     valor: '',
     data_emissao: '',
     data_vencimento: '',
-    fornecedor_id: '',
-    fornecedor_nome_livre: '',
     motivo: '',
     observacoes: '',
     comprovante_url: '',
   });
 
-  useEffect(() => {
-    fetchFornecedores();
-  }, []);
-
-  const fetchFornecedores = async () => {
-    const { data } = await supabase.from('fornecedores').select('id, nome').order('nome');
-    if (data) setFornecedores(data as Fornecedor[]);
-  };
 
   const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -83,8 +65,6 @@ export default function NovaContaPage() {
         valor: valorNum,
         data_emissao: form.data_emissao || null,
         data_vencimento: form.data_vencimento,
-        fornecedor_id: form.fornecedor_id || null,
-        fornecedor_nome_livre: form.fornecedor_nome_livre.trim() || null,
         motivo: form.motivo.trim(),
         observacoes: form.observacoes.trim() || null,
         comprovante_url: form.comprovante_url.trim() || null,
@@ -205,43 +185,6 @@ export default function NovaContaPage() {
           </div>
         </div>
 
-        {/* Seção 2 - Fornecedor */}
-        <div className="section-card">
-          <p className="section-title flex items-center gap-2"><Building2 size={14} /> Fornecedor / Beneficiário</p>
-
-          <div className="space-y-1">
-            <label className="label-micro">Fornecedor cadastrado</label>
-            <div className="flex gap-2">
-              <Select value={form.fornecedor_id} onValueChange={v => update('fornecedor_id', v)}>
-                <SelectTrigger className="h-12 bg-background flex-1">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fornecedores.map(f => (
-                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <button
-                type="button"
-                onClick={() => setShowNewFornecedor(true)}
-                className="h-12 px-3 rounded-xl border border-border bg-background text-primary text-xs font-medium whitespace-nowrap active:scale-95"
-              >
-                + Novo
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="label-micro">Ou nome livre</label>
-            <Input
-              placeholder="Nome do fornecedor (sem cadastro)"
-              value={form.fornecedor_nome_livre}
-              onChange={e => update('fornecedor_nome_livre', e.target.value)}
-              className="h-12 bg-background"
-            />
-          </div>
-        </div>
 
         {/* Seção 3 - Motivo */}
         <div className="section-card">
@@ -300,14 +243,6 @@ export default function NovaContaPage() {
         </div>
       </div>
 
-      <NewFornecedorDialog
-        open={showNewFornecedor}
-        onClose={() => setShowNewFornecedor(false)}
-        onCreated={() => {
-          fetchFornecedores();
-          setShowNewFornecedor(false);
-        }}
-      />
     </AppLayout>
   );
 }

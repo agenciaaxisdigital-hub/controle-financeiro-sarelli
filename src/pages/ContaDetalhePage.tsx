@@ -171,13 +171,6 @@ export default function ContaDetalhePage() {
           </div>
         </div>
 
-        {/* Fornecedor */}
-        {(conta.fornecedor_nome_livre || conta.fornecedor_id) && (
-          <div className="section-card">
-            <p className="section-title flex items-center gap-2"><UserIcon size={14} /> Fornecedor</p>
-            <p className="text-sm">{conta.fornecedor_nome_livre || 'Cadastrado (ID: ' + conta.fornecedor_id + ')'}</p>
-          </div>
-        )}
 
         {/* Motivo */}
         <div className="section-card">
