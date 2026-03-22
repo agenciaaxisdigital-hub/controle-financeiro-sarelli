@@ -92,8 +92,8 @@ export default function LoginPage() {
           }}
         >
           <div className="space-y-1">
-            <label className="text-[11px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Nome de usuário
+            <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>
+              Usuário
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2" size={18} style={{ color: 'rgba(255,255,255,0.25)' }} />
@@ -122,7 +122,7 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            <label className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.5)' }}>
               Senha
             </label>
             <div className="relative">
@@ -170,7 +170,7 @@ export default function LoginPage() {
               className="border-white/20 data-[state=checked]:bg-pink-500 data-[state=checked]:border-pink-500"
             />
             <label htmlFor="remember" className="text-xs cursor-pointer" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Lembrar dados
+              Lembrar meus dados
             </label>
           </div>
 
