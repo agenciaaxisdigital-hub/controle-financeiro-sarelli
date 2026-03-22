@@ -38,7 +38,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden" style={{ background: '#070510' }}>
       {/* 3D Animated background */}
-      <Hyperspeed />
+      <AnimatedBackground />
 
       {/* Vignette overlay */}
       <div
