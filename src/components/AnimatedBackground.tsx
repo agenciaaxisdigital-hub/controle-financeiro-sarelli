@@ -51,11 +51,11 @@ export default function AnimatedBackground() {
 
     // Luxurious orbs — large, soft, slow-moving gradient spheres
     const orbs: Orb[] = [
-      { x: w * 0.2, y: h * 0.3, targetX: 0, targetY: 0, radius: w * 0.35, hue: 340, saturation: 82, lightness: 25, opacity: 0.4, speed: 0.0003, drift: 80, phase: 0 },
-      { x: w * 0.8, y: h * 0.7, targetX: 0, targetY: 0, radius: w * 0.3, hue: 320, saturation: 70, lightness: 20, opacity: 0.3, speed: 0.0004, drift: 60, phase: 2 },
-      { x: w * 0.5, y: h * 0.2, targetX: 0, targetY: 0, radius: w * 0.25, hue: 350, saturation: 80, lightness: 22, opacity: 0.25, speed: 0.00035, drift: 70, phase: 4 },
-      { x: w * 0.3, y: h * 0.8, targetX: 0, targetY: 0, radius: w * 0.28, hue: 310, saturation: 60, lightness: 18, opacity: 0.2, speed: 0.00025, drift: 90, phase: 1 },
-      { x: w * 0.7, y: h * 0.4, targetX: 0, targetY: 0, radius: w * 0.22, hue: 345, saturation: 75, lightness: 30, opacity: 0.15, speed: 0.0005, drift: 50, phase: 3 },
+      { x: w * 0.2, y: h * 0.3, targetX: 0, targetY: 0, radius: w * 0.45, hue: 340, saturation: 82, lightness: 25, opacity: 0.3, speed: 0.00006, drift: 20, phase: 0 },
+      { x: w * 0.8, y: h * 0.7, targetX: 0, targetY: 0, radius: w * 0.38, hue: 320, saturation: 70, lightness: 20, opacity: 0.22, speed: 0.00008, drift: 15, phase: 2 },
+      { x: w * 0.5, y: h * 0.15, targetX: 0, targetY: 0, radius: w * 0.32, hue: 350, saturation: 80, lightness: 22, opacity: 0.18, speed: 0.00007, drift: 18, phase: 4 },
+      { x: w * 0.3, y: h * 0.8, targetX: 0, targetY: 0, radius: w * 0.35, hue: 310, saturation: 60, lightness: 18, opacity: 0.14, speed: 0.00005, drift: 22, phase: 1 },
+      { x: w * 0.7, y: h * 0.4, targetX: 0, targetY: 0, radius: w * 0.28, hue: 345, saturation: 75, lightness: 30, opacity: 0.1, speed: 0.0001, drift: 12, phase: 3 },
     ];
 
     // Mesh gradient control points
