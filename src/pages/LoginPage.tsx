@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import SplashCursor from '@/components/SplashCursor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Lock, User, Loader2 } from 'lucide-react';
-import AnimatedBackground from '@/components/AnimatedBackground';
 
 const FOTO_URL = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699400706d955b03c8c19827/16e72069d_WhatsAppImage2026-02-17at023641.jpeg';
 
@@ -38,7 +38,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden" style={{ background: '#070510' }}>
       {/* 3D Animated background */}
-      <AnimatedBackground />
+      <SplashCursor />
 
       {/* Vignette overlay */}
       <div
