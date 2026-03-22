@@ -123,24 +123,10 @@ export default function NovaContaPage() {
 
           <div className="space-y-1">
             <label className="label-micro">Categoria</label>
-            <Select value={form.categoria} onValueChange={v => update('categoria', v)}>
-              <SelectTrigger className="h-12 bg-background">
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categorias.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="label-micro">Subcategoria</label>
             <Input
-              placeholder="Opcional"
-              value={form.subcategoria}
-              onChange={e => update('subcategoria', e.target.value)}
+              placeholder="Ex.: Material gráfico, Combustível, Pessoal..."
+              value={form.categoria}
+              onChange={e => update('categoria', e.target.value)}
               className="h-12 bg-background"
             />
           </div>
