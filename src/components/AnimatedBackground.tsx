@@ -1,26 +1,28 @@
 import { useEffect, useRef } from 'react';
 
-interface Ribbon {
-  y: number;
-  speed: number;
-  amplitude: number;
-  frequency: number;
-  phase: number;
-  color: string;
-  width: number;
-  opacity: number;
-}
-
-interface Particle {
+interface Orb {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
+  targetX: number;
+  targetY: number;
   radius: number;
-  color: string;
+  hue: number;
+  saturation: number;
+  lightness: number;
   opacity: number;
-  pulse: number;
-  pulseSpeed: number;
+  speed: number;
+  drift: number;
+  phase: number;
+}
+
+interface MeshPoint {
+  x: number;
+  y: number;
+  baseX: number;
+  baseY: number;
+  hue: number;
+  phase: number;
+  speed: number;
 }
 
 export default function AnimatedBackground() {
@@ -29,7 +31,7 @@ export default function AnimatedBackground() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d', { alpha: false })!;
 
     let w = window.innerWidth;
     let h = window.innerHeight;
@@ -47,142 +49,119 @@ export default function AnimatedBackground() {
     resize();
     window.addEventListener('resize', resize);
 
-    // Pink palette
-    const pinks = [
-      'hsla(340, 82%, 55%, ',
-      'hsla(350, 80%, 60%, ',
-      'hsla(330, 70%, 50%, ',
-      'hsla(320, 75%, 58%, ',
-      'hsla(345, 85%, 65%, ',
-      'hsla(310, 60%, 45%, ',
+    // Luxurious orbs — large, soft, slow-moving gradient spheres
+    const orbs: Orb[] = [
+      { x: w * 0.2, y: h * 0.3, targetX: 0, targetY: 0, radius: w * 0.35, hue: 340, saturation: 82, lightness: 25, opacity: 0.4, speed: 0.0003, drift: 80, phase: 0 },
+      { x: w * 0.8, y: h * 0.7, targetX: 0, targetY: 0, radius: w * 0.3, hue: 320, saturation: 70, lightness: 20, opacity: 0.3, speed: 0.0004, drift: 60, phase: 2 },
+      { x: w * 0.5, y: h * 0.2, targetX: 0, targetY: 0, radius: w * 0.25, hue: 350, saturation: 80, lightness: 22, opacity: 0.25, speed: 0.00035, drift: 70, phase: 4 },
+      { x: w * 0.3, y: h * 0.8, targetX: 0, targetY: 0, radius: w * 0.28, hue: 310, saturation: 60, lightness: 18, opacity: 0.2, speed: 0.00025, drift: 90, phase: 1 },
+      { x: w * 0.7, y: h * 0.4, targetX: 0, targetY: 0, radius: w * 0.22, hue: 345, saturation: 75, lightness: 30, opacity: 0.15, speed: 0.0005, drift: 50, phase: 3 },
     ];
 
-    // Flowing ribbons
-    const ribbons: Ribbon[] = [];
-    for (let i = 0; i < 6; i++) {
-      ribbons.push({
-        y: h * (0.15 + Math.random() * 0.7),
-        speed: 0.3 + Math.random() * 0.5,
-        amplitude: 30 + Math.random() * 60,
-        frequency: 0.002 + Math.random() * 0.003,
-        phase: Math.random() * Math.PI * 2,
-        color: pinks[i % pinks.length],
-        width: 80 + Math.random() * 120,
-        opacity: 0.04 + Math.random() * 0.06,
-      });
+    // Mesh gradient control points
+    const meshCols = 5;
+    const meshRows = 5;
+    const meshPoints: MeshPoint[] = [];
+    for (let r = 0; r < meshRows; r++) {
+      for (let c = 0; c < meshCols; c++) {
+        const bx = (c / (meshCols - 1)) * w;
+        const by = (r / (meshRows - 1)) * h;
+        meshPoints.push({
+          x: bx, y: by,
+          baseX: bx, baseY: by,
+          hue: 330 + Math.random() * 30,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.001 + Math.random() * 0.002,
+        });
+      }
     }
 
-    // Floating particles
-    const particles: Particle[] = [];
-    const PARTICLE_COUNT = 45;
-    for (let i = 0; i < PARTICLE_COUNT; i++) {
-      particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: 1 + Math.random() * 2.5,
-        color: pinks[Math.floor(Math.random() * pinks.length)],
-        opacity: 0.2 + Math.random() * 0.5,
-        pulse: Math.random() * Math.PI * 2,
-        pulseSpeed: 0.01 + Math.random() * 0.02,
-      });
+    // Grain overlay (pre-rendered)
+    const grainCanvas = document.createElement('canvas');
+    grainCanvas.width = 256;
+    grainCanvas.height = 256;
+    const grainCtx = grainCanvas.getContext('2d')!;
+    const grainData = grainCtx.createImageData(256, 256);
+    for (let i = 0; i < grainData.data.length; i += 4) {
+      const v = Math.random() * 255;
+      grainData.data[i] = v;
+      grainData.data[i + 1] = v;
+      grainData.data[i + 2] = v;
+      grainData.data[i + 3] = 12;
     }
+    grainCtx.putImageData(grainData, 0, 0);
 
     let animId: number;
-    let t = 0;
+    let time = 0;
 
     const draw = () => {
       animId = requestAnimationFrame(draw);
-      t += 1;
+      time += 1;
+      const t = time * 0.016; // ~seconds
 
-      // Clear with dark bg
+      // Deep dark base
       ctx.fillStyle = '#070510';
       ctx.fillRect(0, 0, w, h);
 
-      // Draw ribbons
-      for (const r of ribbons) {
-        r.phase += r.speed * 0.008;
-        ctx.beginPath();
-        for (let x = -10; x <= w + 10; x += 4) {
-          const wave = Math.sin(x * r.frequency + r.phase) * r.amplitude
-            + Math.sin(x * r.frequency * 0.5 + r.phase * 1.3) * r.amplitude * 0.5;
-          const y = r.y + wave;
-          if (x === -10) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        // Close the ribbon shape
-        for (let x = w + 10; x >= -10; x -= 4) {
-          const wave = Math.sin(x * r.frequency + r.phase + 0.8) * r.amplitude
-            + Math.sin(x * r.frequency * 0.5 + r.phase * 1.3 + 0.5) * r.amplitude * 0.5;
-          const y = r.y + wave + r.width;
-          ctx.lineTo(x, y);
-        }
-        ctx.closePath();
+      // Animate mesh points
+      for (const mp of meshPoints) {
+        mp.x = mp.baseX + Math.sin(t * mp.speed * 60 + mp.phase) * 40;
+        mp.y = mp.baseY + Math.cos(t * mp.speed * 45 + mp.phase * 1.3) * 30;
+      }
 
-        const grad = ctx.createLinearGradient(0, r.y - r.amplitude, 0, r.y + r.width + r.amplitude);
-        grad.addColorStop(0, r.color + '0)');
-        grad.addColorStop(0.3, r.color + r.opacity + ')');
-        grad.addColorStop(0.7, r.color + r.opacity * 0.8 + ')');
-        grad.addColorStop(1, r.color + '0)');
+      // Draw orbs with ultra-smooth radial gradients
+      ctx.globalCompositeOperation = 'screen';
+
+      for (const orb of orbs) {
+        orb.phase += orb.speed;
+        const ox = orb.x + Math.sin(orb.phase * 1000) * orb.drift;
+        const oy = orb.y + Math.cos(orb.phase * 800 + 1) * orb.drift * 0.7;
+        const pulseR = orb.radius * (0.95 + 0.05 * Math.sin(orb.phase * 600));
+
+        const grad = ctx.createRadialGradient(ox, oy, 0, ox, oy, pulseR);
+        const h = orb.hue + Math.sin(orb.phase * 400) * 8;
+        grad.addColorStop(0, `hsla(${h}, ${orb.saturation}%, ${orb.lightness + 10}%, ${orb.opacity})`);
+        grad.addColorStop(0.3, `hsla(${h}, ${orb.saturation}%, ${orb.lightness}%, ${orb.opacity * 0.6})`);
+        grad.addColorStop(0.6, `hsla(${h}, ${orb.saturation - 10}%, ${orb.lightness - 5}%, ${orb.opacity * 0.2})`);
+        grad.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+
         ctx.fillStyle = grad;
-        ctx.fill();
+        ctx.fillRect(ox - pulseR, oy - pulseR, pulseR * 2, pulseR * 2);
       }
 
-      // Draw particles
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.pulse += p.pulseSpeed;
-
-        // Wrap around
-        if (p.x < -5) p.x = w + 5;
-        if (p.x > w + 5) p.x = -5;
-        if (p.y < -5) p.y = h + 5;
-        if (p.y > h + 5) p.y = -5;
-
-        const currentOpacity = p.opacity * (0.5 + 0.5 * Math.sin(p.pulse));
-        const r = p.radius * (0.8 + 0.2 * Math.sin(p.pulse));
-
-        // Glow
-        const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 8);
-        glow.addColorStop(0, p.color + currentOpacity * 0.6 + ')');
-        glow.addColorStop(0.5, p.color + currentOpacity * 0.15 + ')');
-        glow.addColorStop(1, p.color + '0)');
-        ctx.fillStyle = glow;
-        ctx.fillRect(p.x - r * 8, p.y - r * 8, r * 16, r * 16);
-
-        // Core
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = p.color + currentOpacity + ')';
-        ctx.fill();
+      // Secondary layer — smaller accent highlights
+      const accents = [
+        { x: w * 0.15, y: h * 0.5, r: w * 0.12, h: 340, o: 0.08 },
+        { x: w * 0.85, y: h * 0.25, r: w * 0.1, h: 350, o: 0.06 },
+        { x: w * 0.6, y: h * 0.85, r: w * 0.08, h: 330, o: 0.05 },
+      ];
+      for (const a of accents) {
+        const ax = a.x + Math.sin(t * 0.3 + a.h) * 25;
+        const ay = a.y + Math.cos(t * 0.25 + a.h * 0.5) * 20;
+        const ag = ctx.createRadialGradient(ax, ay, 0, ax, ay, a.r);
+        ag.addColorStop(0, `hsla(${a.h}, 80%, 50%, ${a.o})`);
+        ag.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+        ctx.fillStyle = ag;
+        ctx.fillRect(ax - a.r, ay - a.r, a.r * 2, a.r * 2);
       }
 
-      // Connect nearby particles
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i < particles.length; i++) {
-        for (let j = i + 1; j < particles.length; j++) {
-          const dx = particles[i].x - particles[j].x;
-          const dy = particles[i].y - particles[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 150) {
-            const alpha = (1 - dist / 150) * 0.12;
-            ctx.beginPath();
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
-            ctx.strokeStyle = `hsla(340, 82%, 55%, ${alpha})`;
-            ctx.stroke();
-          }
-        }
-      }
+      ctx.globalCompositeOperation = 'source-over';
 
-      // Subtle center glow
-      const centerGlow = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.5);
-      centerGlow.addColorStop(0, 'hsla(340, 82%, 55%, 0.03)');
-      centerGlow.addColorStop(0.5, 'hsla(330, 70%, 50%, 0.015)');
-      centerGlow.addColorStop(1, 'transparent');
-      ctx.fillStyle = centerGlow;
+      // Subtle noise/grain texture overlay for premium feel
+      ctx.globalAlpha = 0.35;
+      const pattern = ctx.createPattern(grainCanvas, 'repeat');
+      if (pattern) {
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, w, h);
+      }
+      ctx.globalAlpha = 1;
+
+      // Vignette
+      const vig = ctx.createRadialGradient(w / 2, h / 2, w * 0.15, w / 2, h / 2, w * 0.75);
+      vig.addColorStop(0, 'rgba(7, 5, 16, 0)');
+      vig.addColorStop(0.6, 'rgba(7, 5, 16, 0.15)');
+      vig.addColorStop(1, 'rgba(7, 5, 16, 0.6)');
+      ctx.fillStyle = vig;
       ctx.fillRect(0, 0, w, h);
     };
 
