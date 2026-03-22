@@ -18,7 +18,7 @@ export default function NovaContaPage() {
   const [form, setForm] = useState({
     descricao: '',
     categoria: '',
-    subcategoria: '',
+    
     valor: '',
     data_emissao: '',
     data_vencimento: '',
@@ -55,7 +55,7 @@ export default function NovaContaPage() {
       .insert({
         descricao: form.descricao.trim(),
         categoria: form.categoria || null,
-        subcategoria: form.subcategoria.trim() || null,
+        
         valor: valorNum,
         data_emissao: form.data_emissao || null,
         data_vencimento: form.data_vencimento,
