@@ -263,6 +263,197 @@ export type Database = {
         }
         Relationships: []
       }
+      contas_pagar: {
+        Row: {
+          aprovado_por: string | null
+          atualizado_em: string
+          categoria: string | null
+          comprovante_url: string | null
+          criado_em: string
+          criado_por: string | null
+          data_emissao: string | null
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          forma_pagamento: string | null
+          fornecedor_id: string | null
+          fornecedor_nome_livre: string | null
+          id: string
+          motivo: string
+          observacoes: string | null
+          pago_por: string | null
+          status: string
+          subcategoria: string | null
+          valor: number
+        }
+        Insert: {
+          aprovado_por?: string | null
+          atualizado_em?: string
+          categoria?: string | null
+          comprovante_url?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          data_emissao?: string | null
+          data_pagamento?: string | null
+          data_vencimento: string
+          descricao: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome_livre?: string | null
+          id?: string
+          motivo: string
+          observacoes?: string | null
+          pago_por?: string | null
+          status?: string
+          subcategoria?: string | null
+          valor: number
+        }
+        Update: {
+          aprovado_por?: string | null
+          atualizado_em?: string
+          categoria?: string | null
+          comprovante_url?: string | null
+          criado_em?: string
+          criado_por?: string | null
+          data_emissao?: string | null
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          fornecedor_nome_livre?: string | null
+          id?: string
+          motivo?: string
+          observacoes?: string | null
+          pago_por?: string | null
+          status?: string
+          subcategoria?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_aprovado_por_fkey"
+            columns: ["aprovado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_pago_por_fkey"
+            columns: ["pago_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_pagar_logs: {
+        Row: {
+          acao: string | null
+          conta_id: string | null
+          criado_em: string
+          id: string
+          observacao: string | null
+          status_anterior: string | null
+          status_novo: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          acao?: string | null
+          conta_id?: string | null
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          status_anterior?: string | null
+          status_novo?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string | null
+          conta_id?: string | null
+          criado_em?: string
+          id?: string
+          observacao?: string | null
+          status_anterior?: string | null
+          status_novo?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_logs_conta_id_fkey"
+            columns: ["conta_id"]
+            isOneToOne: false
+            referencedRelation: "contas_pagar"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_logs_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fornecedores: {
+        Row: {
+          agencia: string | null
+          banco: string | null
+          conta: string | null
+          cpf_cnpj: string | null
+          criado_em: string
+          email: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          pix: string | null
+          telefone: string | null
+          tipo_pessoa: string | null
+        }
+        Insert: {
+          agencia?: string | null
+          banco?: string | null
+          conta?: string | null
+          cpf_cnpj?: string | null
+          criado_em?: string
+          email?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          pix?: string | null
+          telefone?: string | null
+          tipo_pessoa?: string | null
+        }
+        Update: {
+          agencia?: string | null
+          banco?: string | null
+          conta?: string | null
+          cpf_cnpj?: string | null
+          criado_em?: string
+          email?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          pix?: string | null
+          telefone?: string | null
+          tipo_pessoa?: string | null
+        }
+        Relationships: []
+      }
       galeria_analytics: {
         Row: {
           cidade: string | null
