@@ -69,9 +69,12 @@ export default function LoginPage() {
             <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#070510]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Contas a Pagar</h1>
-            <p className="text-sm" style={{ color: 'hsl(340 82% 65%)' }}>
-              Campanha – Dra. Fernanda Sarelli
+            <h1 className="text-xl font-bold text-white">Dra. Fernanda Sarelli</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'hsl(340 82% 65%)' }}>
+              Painel de Suplentes
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Acesso exclusivo da equipe
             </p>
           </div>
         </div>
