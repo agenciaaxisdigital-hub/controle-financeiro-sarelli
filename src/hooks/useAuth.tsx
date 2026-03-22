@@ -14,7 +14,7 @@ interface AuthContextType {
   usuario: Usuario | null;
   loading: boolean;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signInByNome: (nome: string, senha: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
 
@@ -58,9 +58,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+  const signInByNome = async (nome: string, senha: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('login-por-nome', {
+        body: { nome, senha },
+      });
+
+      if (error || data?.error) {
+        return { error: error || new Error(data?.error) };
+      }
+
+      // Set the session from the edge function response
+      if (data?.session) {
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: err };
+    }
   };
 
   const signOut = async () => {
@@ -72,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin = usuario?.tipo === 'admin';
 
   return (
-    <AuthContext.Provider value={{ user, usuario, loading, isAdmin, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, usuario, loading, isAdmin, signInByNome, signOut }}>
       {children}
     </AuthContext.Provider>
   );
