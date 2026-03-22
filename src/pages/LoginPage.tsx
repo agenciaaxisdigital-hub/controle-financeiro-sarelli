@@ -71,7 +71,7 @@ export default function LoginPage() {
           <div>
             <h1 className="text-xl font-bold text-white">Dra. Fernanda Sarelli</h1>
             <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'hsl(340 82% 65%)' }}>
-              Painel de Suplentes
+              Controle de Contas
             </p>
             <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
               Acesso exclusivo da equipe
