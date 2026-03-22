@@ -69,9 +69,12 @@ export default function LoginPage() {
             <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-[#070510]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Contas a Pagar</h1>
-            <p className="text-sm" style={{ color: 'hsl(340 82% 65%)' }}>
-              Campanha – Dra. Fernanda Sarelli
+            <h1 className="text-xl font-bold text-white">Dra. Fernanda Sarelli</h1>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: 'hsl(340 82% 65%)' }}>
+              Painel de Suplentes
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              Acesso exclusivo da equipe
             </p>
           </div>
         </div>
@@ -187,14 +190,22 @@ export default function LoginPage() {
                 Entrando...
               </span>
             ) : (
-              'Entrar'
+              <span className="flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                Entrar
+              </span>
             )}
           </button>
         </form>
 
-        <p className="text-[10px] text-center" style={{ color: 'rgba(255,255,255,0.25)' }}>
-          Sistema exclusivo para membros da campanha
-        </p>
+        <div className="text-center space-y-0.5">
+          <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            Pré-candidata a Deputada Estadual — GO 2026
+          </p>
+          <p className="text-[11px]" style={{ color: 'hsl(340 82% 65%)' }}>
+            drafernandasarelli.com.br
+          </p>
+        </div>
       </div>
     </div>
   );
