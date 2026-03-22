@@ -1,0 +1,20 @@
+{
+  "name": "Contas a Pagar - Campanha Dra. Fernanda Sarelli",
+  "short_name": "Contas a Pagar",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#ec4899",
+  "background_color": "#0f0f0f",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
