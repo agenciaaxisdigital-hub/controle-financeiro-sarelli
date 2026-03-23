@@ -1,6 +1,7 @@
-import "@testing-library/jest-dom";
+import '@testing-library/jest-dom';
 
-Object.defineProperty(window, "matchMedia", {
+// matchMedia
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: (query: string) => ({
     matches: false,
@@ -10,6 +11,26 @@ Object.defineProperty(window, "matchMedia", {
     removeListener: () => {},
     addEventListener: () => {},
     removeEventListener: () => {},
-    dispatchEvent: () => {},
+    dispatchEvent: () => false,
   }),
 });
+
+// ResizeObserver
+global.ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+};
+
+// IntersectionObserver
+global.IntersectionObserver = class IntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as any;
+
+// scrollIntoView
+window.HTMLElement.prototype.scrollIntoView = () => {};
+
+// URL.createObjectURL
+Object.defineProperty(URL, 'createObjectURL', { writable: true, value: () => '' });
