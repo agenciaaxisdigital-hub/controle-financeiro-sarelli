@@ -97,36 +97,43 @@ describe('DashboardPage', () => {
     await waitFor(() => expect(screen.getByText('Minhas contas')).toBeInTheDocument());
   });
 
-  it('admin vê cards de estatísticas', async () => {
+  it('admin vê cards de estatísticas com labels corretos', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByText('Em aberto')).toBeInTheDocument();
-      expect(screen.getByText('Vencendo 7 dias')).toBeInTheDocument();
-      expect(screen.getByText('Vencidas')).toBeInTheDocument();
-      expect(screen.getByText('Pagas no mês')).toBeInTheDocument();
+      expect(screen.getByText('Total a pagar')).toBeInTheDocument();
+      expect(screen.getByText('Vence em 7 dias')).toBeInTheDocument();
+      expect(screen.getByText('Atrasados')).toBeInTheDocument();
+      expect(screen.getByText('Pago este mês')).toBeInTheDocument();
     });
   });
 
-  it('usuário comum NÃO vê cards de estatísticas', async () => {
+  it('usuário comum NÃO vê cards de estatísticas admin', async () => {
     mockUseAuth.mockReturnValue(regularUser);
     renderDashboard();
-    await waitFor(() => expect(screen.queryByText('Em aberto')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('Total a pagar')).not.toBeInTheDocument());
   });
 
-  it('renderiza os botões de filtro', async () => {
+  it('usuário comum com contas a pagar vê resumo de pendências', async () => {
+    mockUseAuth.mockReturnValue(regularUser);
+    renderDashboard();
+    await waitFor(() =>
+      expect(screen.getAllByText(/conta.*a pagar|contas a pagar|aguardando/i).length).toBeGreaterThan(0),
+    );
+  });
+
+  it('renderiza os 4 botões de filtro com linguagem simples', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     renderDashboard();
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Todas' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Lancadas' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Aprovadas' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Pagas' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Canceladas' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tudo' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'A pagar' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Pago' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancelado' })).toBeInTheDocument();
     });
   });
 
-  it('lista as contas buscadas do Supabase', async () => {
+  it('lista as contas com descrições', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     renderDashboard();
     await waitFor(() => {
@@ -136,54 +143,61 @@ describe('DashboardPage', () => {
     });
   });
 
-  it('filtrar por "Lancada" exibe só as contas com esse status', async () => {
+  it('status é exibido em linguagem humana (Aguardando, A pagar, Pago)', async () => {
+    mockUseAuth.mockReturnValue(adminUser);
+    renderDashboard();
+    await waitFor(() => {
+      expect(screen.getAllByText('Aguardando').length).toBeGreaterThan(0); // Lancada
+      expect(screen.getAllByText('A pagar').length).toBeGreaterThan(0);    // Aprovada
+      expect(screen.getAllByText('Pago').length).toBeGreaterThan(0);       // Paga
+    });
+  });
+
+  it('filtro "A pagar" exibe só Lancada + Aprovada', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     renderDashboard();
     await waitFor(() => screen.getByText('Impressão de santinhos'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Lancadas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'A pagar' }));
 
-    expect(screen.getByText('Impressão de santinhos')).toBeInTheDocument();
-    expect(screen.queryByText('Combustível equipe')).not.toBeInTheDocument();
-    expect(screen.queryByText('Pagamento DJ')).not.toBeInTheDocument();
+    expect(screen.getByText('Impressão de santinhos')).toBeInTheDocument();  // Lancada
+    expect(screen.getByText('Combustível equipe')).toBeInTheDocument();       // Aprovada
+    expect(screen.queryByText('Pagamento DJ')).not.toBeInTheDocument();       // Paga — deve sumir
   });
 
   it('clicar em uma conta navega para /conta/:id', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     renderDashboard();
     await waitFor(() => screen.getByText('Impressão de santinhos'));
-
     fireEvent.click(screen.getByText('Impressão de santinhos').closest('button')!);
     expect(mockNavigate).toHaveBeenCalledWith('/conta/c1');
   });
 
-  it('botão FAB (+ Nova Conta) navega para /nova-conta', async () => {
+  it('botão FAB navega para /nova-conta', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     renderDashboard();
     await waitFor(() => screen.getByText('Impressão de santinhos'));
-
-    // FAB é o último botão fixo com aria sem texto visível — buscamos pelo svg/Plus
     const fabBtn = document.querySelector('button.fixed') as HTMLButtonElement;
-    expect(fabBtn).toBeTruthy();
     fireEvent.click(fabBtn);
     expect(mockNavigate).toHaveBeenCalledWith('/nova-conta');
   });
 
-  it('exibe estado vazio quando não há contas', async () => {
+  it('estado vazio exibe mensagem e link de novo registro', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     mockFrom.mockReturnValue(makeChain({ data: [], error: null }));
     renderDashboard();
     await waitFor(() =>
-      expect(screen.getByText('Nenhuma conta encontrada')).toBeInTheDocument(),
+      expect(screen.getByText('Nenhum registro encontrado')).toBeInTheDocument(),
     );
+    expect(screen.getByText('+ Registrar novo gasto')).toBeInTheDocument();
   });
 
-  it('link "Lançar nova conta" no estado vazio navega para /nova-conta', async () => {
+  it('link "+ Registrar novo gasto" no estado vazio navega para /nova-conta', async () => {
     mockUseAuth.mockReturnValue(adminUser);
     mockFrom.mockReturnValue(makeChain({ data: [], error: null }));
     renderDashboard();
-    await waitFor(() => screen.getByText('Lançar nova conta'));
-    fireEvent.click(screen.getByText('Lançar nova conta'));
+    await waitFor(() => screen.getByText('+ Registrar novo gasto'));
+    fireEvent.click(screen.getByText('+ Registrar novo gasto'));
     expect(mockNavigate).toHaveBeenCalledWith('/nova-conta');
   });
 });
