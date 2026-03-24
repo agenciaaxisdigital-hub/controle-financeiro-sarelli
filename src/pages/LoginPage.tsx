@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import Hyperspeed from '@/components/Hyperspeed';
 import { toast } from 'sonner';
 
-const APP_TITLE = 'Controle de Contas';
+const APP_TITLE = 'Financeiro';
 const FOTO_URL = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699400706d955b03c8c19827/16e72069d_WhatsAppImage2026-02-17at023641.jpeg';
 
 const hyperspeedPreset = {
@@ -64,21 +64,28 @@ export default function LoginPage() {
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center p-4 relative overflow-hidden" style={{ background: '#070510' }}>
       <Hyperspeed effectOptions={preset} />
+      <div className="absolute top-0 left-0 right-0 h-[2px] z-[2]" style={{ background: 'linear-gradient(90deg, #ec4899, #fb7185, #a855f7, #ec4899)' }} />
       <div className="absolute inset-0 z-[1] pointer-events-none" style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(7,5,16,0.5) 100%)' }} />
+      <div className="absolute -top-20 -left-20 w-52 h-52 rounded-full blur-3xl bg-pink-500/25 pointer-events-none brand-float-slow" />
+      <div className="absolute -bottom-20 -right-16 w-52 h-52 rounded-full blur-3xl bg-purple-500/20 pointer-events-none brand-float-slow" />
 
-      <div className="w-full max-w-sm space-y-6 relative z-10">
+      <div className="w-full max-w-sm space-y-6 relative z-10 brand-fade-up">
         <div className="text-center space-y-3">
-          <div className="relative mx-auto w-28 h-28">
+          <div className="relative mx-auto w-28 h-28 brand-float-slow">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pink-500 to-rose-400 p-[3px]">
               <div className="w-full h-full rounded-full overflow-hidden bg-black">
                 <img src={FOTO_URL} alt="Dra. Fernanda Sarelli" className="w-full h-full object-cover" loading="eager" />
               </div>
             </div>
-            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-black" />
+            <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-black brand-pulse-glow" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white tracking-tight">Dra. Fernanda Sarelli</h1>
-            <p className="text-xs font-medium text-pink-400 uppercase tracking-widest mt-1">{APP_TITLE}</p>
+            <div className="flex items-center justify-center gap-2 mt-1">
+              <span className="h-[2px] w-5 rounded-full bg-gradient-to-r from-pink-500 to-rose-400" />
+              <p className="text-xs font-medium text-pink-400 uppercase tracking-widest">{APP_TITLE}</p>
+              <span className="h-[2px] w-5 rounded-full bg-gradient-to-r from-rose-400 to-pink-500" />
+            </div>
           </div>
           <p className="text-[11px] text-white/40">Acesso exclusivo da equipe</p>
         </div>

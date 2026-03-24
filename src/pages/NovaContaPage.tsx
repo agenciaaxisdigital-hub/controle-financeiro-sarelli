@@ -2,40 +2,68 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { ArrowLeft, DollarSign, CalendarDays, FileText, MessageSquare, Paperclip } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 
+const categorias = [
+  'Material gráfico',
+  'Combustível',
+  'Pessoal',
+  'Aluguel',
+  'Mídia digital',
+  'Mídia tradicional (rádio/TV)',
+  'Eventos',
+  'Serviços (jurídico, contábil, etc.)',
+  'Outros',
+];
+
+const formasPagamento = ['Dinheiro', 'Transferência', 'PIX', 'Cartão', 'Boleto', 'Cheque'];
 
 export default function NovaContaPage() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [jaPaguei, setJaPaguei] = useState(false);
 
   const [form, setForm] = useState({
     descricao: '',
     categoria: '',
-    
     valor: '',
-    data_emissao: '',
     data_vencimento: '',
+    data_pagamento: '',
+    forma_pagamento: '',
     motivo: '',
     observacoes: '',
     comprovante_url: '',
   });
 
-
-  const update = (field: string, value: string) => setForm(prev => ({ ...prev, [field]: value }));
+  const set = (field: string, value: string) =>
+    setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = async () => {
-    if (!form.descricao.trim() || !form.valor || !form.data_vencimento || !form.motivo.trim()) {
-      toast.error('Preencha os campos obrigatórios: Descrição, Valor, Vencimento e Motivo');
+    if (!form.descricao.trim()) {
+      toast.error('Descreva o que foi comprado/pago');
       return;
     }
-
+    if (!form.valor) {
+      toast.error('Informe o valor');
+      return;
+    }
+    if (!jaPaguei && !form.data_vencimento) {
+      toast.error('Informe a data de vencimento');
+      return;
+    }
+    if (jaPaguei && !form.data_pagamento) {
+      toast.error('Informe a data em que foi pago');
+      return;
+    }
+    if (!form.motivo.trim()) {
+      toast.error('Explique por que esse gasto foi necessário');
+      return;
+    }
     if (!usuario) {
       toast.error('Usuário não identificado');
       return;
@@ -43,7 +71,9 @@ export default function NovaContaPage() {
 
     setLoading(true);
 
-    const valorNum = parseFloat(form.valor.replace(/[^\d,.-]/g, '').replace(',', '.'));
+    const valorNum = parseFloat(
+      form.valor.replace(/[^\d,.-]/g, '').replace(',', '.'),
+    );
     if (isNaN(valorNum) || valorNum <= 0) {
       toast.error('Valor inválido');
       setLoading(false);
@@ -55,174 +85,223 @@ export default function NovaContaPage() {
       .insert({
         descricao: form.descricao.trim(),
         categoria: form.categoria || null,
-        
         valor: valorNum,
-        data_emissao: form.data_emissao || null,
-        data_vencimento: form.data_vencimento,
         motivo: form.motivo.trim(),
         observacoes: form.observacoes.trim() || null,
         comprovante_url: form.comprovante_url.trim() || null,
         status: 'Lancada',
         criado_por: usuario.id,
+        data_vencimento: jaPaguei ? form.data_pagamento : form.data_vencimento,
+        data_pagamento: jaPaguei ? form.data_pagamento : null,
+        forma_pagamento: jaPaguei && form.forma_pagamento ? form.forma_pagamento : null,
       })
       .select('id')
       .single();
 
     if (error) {
-      toast.error('Erro ao salvar conta');
+      toast.error('Erro ao salvar. Tente novamente.');
       setLoading(false);
       return;
     }
 
-    // Create log
     await supabase.from('contas_pagar_logs').insert({
       conta_id: conta.id,
       usuario_id: usuario.id,
       acao: 'CRIADA',
       status_anterior: null,
       status_novo: 'Lancada',
+      observacao: jaPaguei ? 'Registrado como já pago pelo lançador' : null,
     });
 
-    toast.success('Conta lançada com sucesso');
+    toast.success(
+      jaPaguei ? 'Pagamento registrado com sucesso!' : 'Conta lançada com sucesso!',
+    );
     navigate('/');
     setLoading(false);
   };
 
   return (
     <AppLayout>
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-5 animate-fade-in">
+
+        {/* Header */}
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="text-muted-foreground active:scale-90">
             <ArrowLeft size={20} />
           </button>
-          <div>
-            <h2 className="text-xl font-bold">Nova Conta</h2>
-            <p className="text-micro">Status inicial: Lançada</p>
-          </div>
+          <h2 className="text-xl font-bold">Registrar gasto</h2>
         </div>
 
-        {/* Seção 1 - Dados da conta */}
-        <div className="section-card">
-          <p className="section-title flex items-center gap-2"><FileText size={14} /> Dados da Conta</p>
+        {/* Toggle: já paguei / preciso pagar */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
+          <button
+            onClick={() => setJaPaguei(false)}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              !jaPaguei
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <Clock size={15} />
+            Preciso pagar
+          </button>
+          <button
+            onClick={() => setJaPaguei(true)}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              jaPaguei
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground'
+            }`}
+          >
+            <CheckCircle2 size={15} />
+            Já paguei
+          </button>
+        </div>
 
-          <div className="space-y-1">
-            <label className="label-micro">Descrição *</label>
+        {/* Card principal */}
+        <div className="section-card space-y-4">
+
+          {/* Descrição */}
+          <div className="space-y-1.5">
+            <label className="label-micro">
+              O que {jaPaguei ? 'foi comprado / pago' : 'precisa ser pago'} *
+            </label>
             <Input
-              placeholder="Ex.: Impressão de 10.000 santinhos zona 45"
+              placeholder={
+                jaPaguei
+                  ? 'Ex.: Impressão de panfletos zona norte'
+                  : 'Ex.: Aluguel do escritório, conta de energia...'
+              }
               value={form.descricao}
-              onChange={e => update('descricao', e.target.value)}
+              onChange={e => set('descricao', e.target.value)}
               className="h-12 bg-background"
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="label-micro">Categoria</label>
-            <Input
-              placeholder="Ex.: Material gráfico, Combustível, Pessoal..."
-              value={form.categoria}
-              onChange={e => update('categoria', e.target.value)}
-              className="h-12 bg-background"
-            />
-          </div>
-
+          {/* Valor + Categoria */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <label className="label-micro">Valor (R$) *</label>
-              <div className="relative">
-                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  value={form.valor}
-                  onChange={e => update('valor', e.target.value)}
-                  className="pl-9 h-12 bg-background"
-                />
-              </div>
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={form.valor}
+                onChange={e => set('valor', e.target.value)}
+                className="h-12 bg-background"
+              />
             </div>
-            <div className="space-y-1">
-              <label className="label-micro">Vencimento *</label>
-              <div className="relative">
-                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <div className="space-y-1.5">
+              <label className="label-micro">Categoria</label>
+              <select
+                value={form.categoria}
+                onChange={e => set('categoria', e.target.value)}
+                className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Selecionar...</option>
+                {categorias.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Data e forma — muda conforme o toggle */}
+          {jaPaguei ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="label-micro">Quando foi pago? *</label>
                 <Input
                   type="date"
-                  value={form.data_vencimento}
-                  onChange={e => update('data_vencimento', e.target.value)}
-                  className="pl-9 h-12 bg-background"
+                  value={form.data_pagamento}
+                  onChange={e => set('data_pagamento', e.target.value)}
+                  className="h-12 bg-background"
                 />
               </div>
+              <div className="space-y-1.5">
+                <label className="label-micro">Como foi pago?</label>
+                <select
+                  value={form.forma_pagamento}
+                  onChange={e => set('forma_pagamento', e.target.value)}
+                  className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Selecionar...</option>
+                  {formasPagamento.map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-1.5">
+              <label className="label-micro">Quando vence / precisa ser pago? *</label>
+              <Input
+                type="date"
+                value={form.data_vencimento}
+                onChange={e => set('data_vencimento', e.target.value)}
+                className="h-12 bg-background"
+              />
+            </div>
+          )}
 
-          <div className="space-y-1">
-            <label className="label-micro">Data de emissão</label>
-            <Input
-              type="date"
-              value={form.data_emissao}
-              onChange={e => update('data_emissao', e.target.value)}
-              className="h-12 bg-background"
-            />
-          </div>
-        </div>
-
-
-        {/* Seção 3 - Motivo */}
-        <div className="section-card">
-          <p className="section-title flex items-center gap-2"><MessageSquare size={14} /> Motivo / Justificativa *</p>
-          <Textarea
-            placeholder="Explique por que essa despesa é necessária para a campanha (ex.: impressão de material para ação no bairro X, combustível para deslocamento da equipe, etc.)."
-            value={form.motivo}
-            onChange={e => update('motivo', e.target.value)}
-            rows={4}
-            className="bg-background"
-          />
-        </div>
-
-        {/* Seção 4 - Anexos */}
-        <div className="section-card">
-          <p className="section-title flex items-center gap-2"><Paperclip size={14} /> Anexos e Observações</p>
-
-          <div className="space-y-1">
-            <label className="label-micro">URL do comprovante/nota</label>
-            <Input
-              placeholder="https://..."
-              value={form.comprovante_url}
-              onChange={e => update('comprovante_url', e.target.value)}
-              className="h-12 bg-background"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="label-micro">Observações</label>
+          {/* Motivo */}
+          <div className="space-y-1.5">
+            <label className="label-micro">
+              Por que {jaPaguei ? 'esse gasto foi necessário' : 'esse gasto é necessário'}? *
+            </label>
             <Textarea
-              placeholder="Observações adicionais (opcional)"
+              placeholder="Ex.: Impressão para evento no bairro X no dia Y, aluguel do espaço para reunião de equipe..."
+              value={form.motivo}
+              onChange={e => set('motivo', e.target.value)}
+              rows={3}
+              className="bg-background"
+            />
+          </div>
+        </div>
+
+        {/* Extras */}
+        <div className="section-card space-y-4">
+          <p className="section-title">Extras (opcional)</p>
+
+          <div className="space-y-1.5">
+            <label className="label-micro">Link do comprovante / nota fiscal</label>
+            <Input
+              placeholder="https://... (foto, PDF, Google Drive...)"
+              value={form.comprovante_url}
+              onChange={e => set('comprovante_url', e.target.value)}
+              className="h-12 bg-background"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="label-micro">Observações adicionais</label>
+            <Textarea
+              placeholder="Alguma informação extra que queira registrar..."
               value={form.observacoes}
-              onChange={e => update('observacoes', e.target.value)}
+              onChange={e => set('observacoes', e.target.value)}
               rows={2}
               className="bg-background"
             />
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Ações */}
         <div className="space-y-3 pb-4">
-          <Button
+          <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full h-12 gradient-primary text-primary-foreground font-semibold shadow-lg rounded-xl active:scale-[0.97] transition-transform"
+            className="w-full h-12 rounded-xl font-semibold text-primary-foreground gradient-primary shadow-lg active:scale-[0.97] transition-transform disabled:opacity-60"
           >
-            {loading ? 'Salvando...' : 'Salvar Conta'}
-          </Button>
-          <Button
-            variant="ghost"
+            {loading ? 'Salvando...' : jaPaguei ? 'Registrar pagamento' : 'Lançar conta'}
+          </button>
+          <button
             onClick={() => navigate(-1)}
-            className="w-full h-12"
+            className="w-full h-12 rounded-xl font-medium text-muted-foreground bg-transparent border border-border"
           >
             Cancelar
-          </Button>
+          </button>
         </div>
       </div>
-
     </AppLayout>
   );
 }
