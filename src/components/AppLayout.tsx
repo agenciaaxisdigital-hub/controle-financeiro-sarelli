@@ -19,27 +19,27 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const filteredNav = navItems.filter(item => !item.adminOnly || isAdmin);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header gradient line */}
-      <div className="gradient-header h-[1.5px] w-full sticky top-0 z-50" />
-      
+    <div className="min-h-[100dvh] bg-muted flex flex-col" style={{ paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }}>
+      {/* Header gradient bar */}
+      <div className="bg-gradient-to-r from-primary via-rose-400 to-pink-300 h-1.5 sticky top-0 z-50" />
+
       {/* Header */}
-      <header className="sticky top-[1.5px] z-40 bg-card/95 backdrop-blur-xl border-b border-border">
-        <div className="max-w-app mx-auto px-4 h-14 flex items-center">
+      <header className="sticky top-1.5 z-40 bg-card border-b border-border px-4 py-3">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">₢</span>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-rose-400 flex items-center justify-center">
+              <span className="text-xs font-bold text-primary-foreground">FS</span>
             </div>
             <div>
-              <h1 className="text-sm font-bold leading-tight">Contas a Pagar</h1>
-              <p className="text-micro">Campanha Dra. Fernanda Sarelli</p>
+              <h1 className="text-sm font-bold text-foreground leading-tight">Controle Financeiro</h1>
+              <p className="text-[10px] text-muted-foreground">Dra. Fernanda Sarelli</p>
             </div>
           </div>
         </div>
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-app mx-auto w-full px-4 pb-24 pt-4 hide-scrollbar">
+      <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-4 pb-24 hide-scrollbar">
         {children}
       </main>
 
