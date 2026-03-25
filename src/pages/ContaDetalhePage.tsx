@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, X, CreditCard, FileText, Paperclip, History, Download, RefreshCw, Clock, User } from 'lucide-react';
+import { ArrowLeft, Check, X, CreditCard, Paperclip, History, Download, RefreshCw, Clock, User, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,25 +15,18 @@ import UserSelect from '@/components/UserSelect';
 import FileUpload from '@/components/FileUpload';
 import { gerarPdfConta } from '@/lib/gerarPdfConta';
 
-const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
-  Lancada:  { label: 'Aguardando aprovação', icon: Clock,        color: 'text-yellow-600 bg-yellow-500/10 border-yellow-400/30' },
-  Aprovada: { label: 'Aprovado · A pagar',   icon: Check,        color: 'text-blue-600 bg-blue-500/10 border-blue-400/30' },
-  Paga:     { label: 'Pago ✓',               icon: CreditCard,   color: 'text-green-600 bg-green-500/10 border-green-400/30' },
-  Cancelada:{ label: 'Cancelado',            icon: X,            color: 'text-red-500 bg-red-500/10 border-red-400/30' },
-};
+const STEPS = [
+  { key: 'Lancada', label: 'Registrada', emoji: '📝' },
+  { key: 'Aprovada', label: 'Aprovada', emoji: '✅' },
+  { key: 'Paga', label: 'Paga', emoji: '💰' },
+];
 
 const formasPagamento = ['PIX', 'Dinheiro', 'Transferência', 'Cartão', 'Boleto', 'Cheque'];
 
 interface LogEntry {
-  id: string;
-  acao: string;
-  status_anterior: string | null;
-  status_novo: string | null;
-  observacao: string | null;
-  criado_em: string;
-  usuario_id: string;
+  id: string; acao: string; status_anterior: string | null; status_novo: string | null;
+  observacao: string | null; criado_em: string; usuario_id: string;
 }
-
 interface UsuarioSimples { id: string; nome: string; }
 
 export default function ContaDetalhePage() {
@@ -89,21 +82,14 @@ export default function ContaDetalhePage() {
     }
 
     const { error } = await supabase.from('contas_pagar').update(updates).eq('id', conta.id);
-    if (error) {
-      toast.error('Erro ao atualizar');
-      setActionLoading(false);
-      return;
-    }
+    if (error) { toast.error('Erro ao atualizar'); setActionLoading(false); return; }
 
     await supabase.from('contas_pagar_logs').insert({
-      conta_id: conta.id,
-      usuario_id: usuario.id,
-      acao: 'STATUS_ALTERADO',
-      status_anterior: conta.status,
-      status_novo: newStatus,
+      conta_id: conta.id, usuario_id: usuario.id,
+      acao: 'STATUS_ALTERADO', status_anterior: conta.status, status_novo: newStatus,
     });
 
-    toast.success(newStatus === 'Paga' ? '✓ Pagamento registrado!' : `Atualizado!`);
+    toast.success(newStatus === 'Paga' ? '💰 Pagamento registrado!' : '✅ Atualizado!');
     fetchConta();
     setActionLoading(false);
   };
@@ -111,18 +97,11 @@ export default function ContaDetalhePage() {
   const handleGerarPdf = () => {
     if (!conta) return;
     gerarPdfConta({
-      descricao: conta.descricao,
-      valor: Number(conta.valor),
-      categoria: conta.categoria,
-      motivo: conta.motivo,
-      status: conta.status,
-      data_vencimento: conta.data_vencimento,
-      data_pagamento: conta.data_pagamento,
-      forma_pagamento: conta.forma_pagamento,
-      chave_pix: conta.chave_pix,
-      comprovante_url: conta.comprovante_url,
-      criado_em: conta.criado_em,
-      observacoes: conta.observacoes,
+      descricao: conta.descricao, valor: Number(conta.valor), categoria: conta.categoria,
+      motivo: conta.motivo, status: conta.status, data_vencimento: conta.data_vencimento,
+      data_pagamento: conta.data_pagamento, forma_pagamento: conta.forma_pagamento,
+      chave_pix: conta.chave_pix, comprovante_url: conta.comprovante_url,
+      criado_em: conta.criado_em, observacoes: conta.observacoes,
       criado_por_nome: getNome(conta.criado_por) ?? undefined,
       aprovado_por_nome: getNome(conta.aprovado_por) ?? undefined,
       pago_por_nome: getNome(conta.pago_por) ?? undefined,
@@ -163,13 +142,19 @@ export default function ContaDetalhePage() {
   if (!conta) {
     return (
       <AppLayout>
-        <div className="text-center py-20 text-muted-foreground">Conta não encontrada</div>
+        <div className="text-center py-20 space-y-3">
+          <p className="text-3xl">🔍</p>
+          <p className="text-muted-foreground">Conta não encontrada</p>
+          <button onClick={() => navigate('/')} className="text-sm text-primary font-semibold">
+            Voltar ao início
+          </button>
+        </div>
       </AppLayout>
     );
   }
 
-  const cfg = statusConfig[conta.status] ?? { label: conta.status, icon: Clock, color: 'text-muted-foreground bg-muted' };
-  const StatusIcon = cfg.icon;
+  // Progresso visual
+  const currentStepIdx = conta.status === 'Cancelada' ? -1 : STEPS.findIndex(s => s.key === conta.status);
 
   return (
     <AppLayout>
@@ -180,50 +165,86 @@ export default function ContaDetalhePage() {
           <ArrowLeft size={18} /> Voltar
         </button>
 
-        {/* Card principal — descrição + valor + status */}
-        <div className="section-card !space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold leading-tight">{conta.descricao}</h2>
-              {conta.categoria && <p className="text-[11px] text-muted-foreground mt-0.5">{conta.categoria}</p>}
+        {/* Valor + descrição */}
+        <div className="section-card !space-y-3">
+          <p className="text-2xl font-bold text-primary tabular-nums">{fmt(Number(conta.valor))}</p>
+          <h2 className="text-base font-bold leading-tight">{conta.descricao}</h2>
+          {conta.categoria && (
+            <span className="inline-block text-[11px] font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+              {conta.categoria}
+            </span>
+          )}
+
+          {conta.recorrente && (
+            <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 border border-blue-200">
+              <RefreshCw size={13} />
+              Conta mensal · vence todo dia {conta.dia_vencimento_recorrente}
             </div>
-            <p className="text-xl font-bold text-primary tabular-nums shrink-0">
-              {fmt(Number(conta.valor))}
-            </p>
-          </div>
+          )}
+        </div>
 
-          {/* Status badge */}
-          <div className={cn('flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium', cfg.color)}>
-            <StatusIcon size={16} />
-            {cfg.label}
+        {/* Barra de progresso visual */}
+        {conta.status !== 'Cancelada' ? (
+          <div className="section-card !p-4 !space-y-0">
+            <div className="flex items-center justify-between">
+              {STEPS.map((step, idx) => {
+                const done = idx <= currentStepIdx;
+                const isCurrent = idx === currentStepIdx;
+                return (
+                  <div key={step.key} className="flex items-center">
+                    <div className="flex flex-col items-center">
+                      <div className={cn(
+                        'w-10 h-10 rounded-full flex items-center justify-center text-base border-2 transition-all',
+                        done
+                          ? 'bg-primary/10 border-primary text-primary'
+                          : 'bg-muted border-border text-muted-foreground'
+                      )}>
+                        {step.emoji}
+                      </div>
+                      <span className={cn(
+                        'text-[10px] mt-1.5 font-medium',
+                        isCurrent ? 'text-primary font-bold' : done ? 'text-foreground' : 'text-muted-foreground'
+                      )}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {idx < STEPS.length - 1 && (
+                      <div className={cn(
+                        'w-8 h-0.5 mx-1 rounded-full -mt-4',
+                        idx < currentStepIdx ? 'bg-primary' : 'bg-border'
+                      )} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
+        ) : (
+          <div className="section-card !p-3 flex items-center gap-2 bg-red-50 border-red-200 !space-y-0">
+            <X size={18} className="text-red-500" />
+            <span className="text-sm font-semibold text-red-700">Esta conta foi cancelada</span>
+          </div>
+        )}
 
-          {/* Info rápida */}
-          <div className="space-y-2 text-sm">
+        {/* Informações */}
+        <div className="section-card">
+          <p className="section-title">Informações</p>
+          <div className="space-y-2.5 text-sm">
             <InfoRow label="Vencimento" value={fmtData(conta.data_vencimento)} />
             {conta.data_pagamento && <InfoRow label="Pago em" value={fmtData(conta.data_pagamento)} />}
-            {conta.forma_pagamento && <InfoRow label="Forma" value={conta.forma_pagamento} />}
+            {conta.forma_pagamento && <InfoRow label="Forma de pagamento" value={conta.forma_pagamento} />}
             {conta.chave_pix && <InfoRow label="Chave PIX" value={conta.chave_pix} />}
             <InfoRow label="Registrado por" value={getNome(conta.criado_por) ?? '—'} />
             {conta.aprovado_por && <InfoRow label="Aprovado por" value={getNome(conta.aprovado_por) ?? '—'} />}
             {conta.pago_por && <InfoRow label="Pago por" value={getNome(conta.pago_por) ?? '—'} />}
           </div>
-
-          {conta.recorrente && (
-            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-500/5 rounded-lg px-3 py-2">
-              <RefreshCw size={14} />
-              Recorrente · vence todo dia {conta.dia_vencimento_recorrente}
-            </div>
-          )}
         </div>
 
         {/* Motivo */}
         <div className="section-card">
-          <p className="section-title">Por que esse gasto?</p>
+          <p className="section-title">Motivo do gasto</p>
           <p className="text-sm leading-relaxed">{conta.motivo}</p>
-          {conta.observacoes && (
-            <p className="text-[11px] text-muted-foreground mt-2">{conta.observacoes}</p>
-          )}
+          {conta.observacoes && <p className="text-[11px] text-muted-foreground mt-2">{conta.observacoes}</p>}
         </div>
 
         {/* Comprovante */}
@@ -236,7 +257,7 @@ export default function ContaDetalhePage() {
           />
         </div>
 
-        {/* Gerar PDF */}
+        {/* PDF */}
         {(conta.status === 'Paga' || conta.status === 'Aprovada') && (
           <button
             onClick={handleGerarPdf}
@@ -246,10 +267,13 @@ export default function ContaDetalhePage() {
           </button>
         )}
 
-        {/* ========== AÇÕES ========== */}
+        {/* ========== AÇÕES ADMIN ========== */}
         {isAdmin && conta.status === 'Lancada' && (
-          <div className="section-card !space-y-3">
-            <p className="section-title">O que deseja fazer?</p>
+          <div className="section-card !space-y-3 border-primary/20">
+            <p className="section-title">👆 Próximo passo</p>
+            <p className="text-[12px] text-muted-foreground">
+              Revise os dados acima e escolha uma ação:
+            </p>
             <Button
               onClick={() => changeStatus('Aprovada')}
               disabled={actionLoading}
@@ -261,22 +285,22 @@ export default function ContaDetalhePage() {
               variant="outline"
               onClick={() => changeStatus('Cancelada')}
               disabled={actionLoading}
-              className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
+              className="w-full h-11 text-destructive border-destructive/30 rounded-xl text-sm"
             >
-              <X size={16} className="mr-2" /> Recusar
+              <X size={14} className="mr-2" /> Recusar
             </Button>
           </div>
         )}
 
         {isAdmin && conta.status === 'Aprovada' && (
-          <div className="section-card !space-y-4">
-            <p className="section-title">Registrar pagamento</p>
-            <p className="text-[11px] text-muted-foreground">
-              Preencha como foi pago e clique em confirmar.
+          <div className="section-card !space-y-4 border-primary/20">
+            <p className="section-title">💳 Registrar pagamento</p>
+            <p className="text-[12px] text-muted-foreground">
+              Informe como e quem pagou, depois clique em confirmar.
             </p>
 
             <div className="space-y-1.5">
-              <label className="label-micro">Como foi pago?</label>
+              <label className="label-micro">Como foi pago? *</label>
               <Select value={formaPagamento} onValueChange={setFormaPagamento}>
                 <SelectTrigger className="h-12 bg-background rounded-xl">
                   <SelectValue placeholder="Escolha a forma..." />
@@ -310,7 +334,7 @@ export default function ContaDetalhePage() {
 
             <Button
               onClick={() => changeStatus('Paga')}
-              disabled={actionLoading}
+              disabled={actionLoading || !formaPagamento}
               className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
             >
               <CreditCard size={16} className="mr-2" /> Confirmar pagamento
@@ -320,10 +344,20 @@ export default function ContaDetalhePage() {
               variant="outline"
               onClick={() => changeStatus('Cancelada')}
               disabled={actionLoading}
-              className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
+              className="w-full h-11 text-destructive border-destructive/30 rounded-xl text-sm"
             >
-              <X size={16} className="mr-2" /> Cancelar conta
+              <X size={14} className="mr-2" /> Cancelar conta
             </Button>
+          </div>
+        )}
+
+        {/* Após pagar — lembrete de comprovante */}
+        {conta.status === 'Paga' && !conta.comprovante_url && (
+          <div className="section-card !p-3 flex items-center gap-3 bg-yellow-50 border-yellow-200 !space-y-0">
+            <Paperclip size={18} className="text-yellow-600 shrink-0" />
+            <p className="text-[12px] text-yellow-700 font-medium">
+              Não esqueça de anexar o comprovante! Role até a seção acima.
+            </p>
           </div>
         )}
 
@@ -336,11 +370,10 @@ export default function ContaDetalhePage() {
                 <div key={log.id} className="text-xs border-l-2 border-primary/30 pl-3 py-1.5">
                   <p className="text-muted-foreground">{fmtDateTime(log.criado_em)}</p>
                   <p className="font-medium">
-                    {log.acao === 'CRIADA' ? 'Conta registrada' : 'Status atualizado'}
+                    {log.acao === 'CRIADA' ? '📝 Conta registrada' : '🔄 Status atualizado'}
                     {log.status_anterior && log.status_novo && (
                       <span className="text-muted-foreground font-normal">
-                        {' · '}{statusConfig[log.status_anterior]?.label ?? log.status_anterior}
-                        {' → '}{statusConfig[log.status_novo]?.label ?? log.status_novo}
+                        {' → '}{log.status_novo === 'Paga' ? '💰 Paga' : log.status_novo === 'Aprovada' ? '✅ Aprovada' : log.status_novo}
                       </span>
                     )}
                   </p>
