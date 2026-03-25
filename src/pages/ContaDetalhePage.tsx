@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, X, CreditCard, Clock, FileText, MessageSquare, Paperclip, History, Download, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, X, CreditCard, FileText, Paperclip, History, Download, RefreshCw, Clock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,19 +15,14 @@ import UserSelect from '@/components/UserSelect';
 import FileUpload from '@/components/FileUpload';
 import { gerarPdfConta } from '@/lib/gerarPdfConta';
 
-const statusConfig: Record<string, { label: string; style: string }> = {
-  Lancada:  { label: 'Aguardando revisão', style: 'bg-yellow-500/15 text-yellow-600 border-yellow-400/30' },
-  Aprovada: { label: 'A pagar',            style: 'bg-blue-500/15 text-blue-600 border-blue-400/30' },
-  Paga:     { label: 'Pago',               style: 'bg-green-500/15 text-green-600 border-green-400/30' },
-  Cancelada:{ label: 'Cancelado',          style: 'bg-red-500/15 text-red-500 border-red-400/30' },
+const statusConfig: Record<string, { label: string; icon: any; color: string }> = {
+  Lancada:  { label: 'Aguardando aprovação', icon: Clock,        color: 'text-yellow-600 bg-yellow-500/10 border-yellow-400/30' },
+  Aprovada: { label: 'Aprovado · A pagar',   icon: Check,        color: 'text-blue-600 bg-blue-500/10 border-blue-400/30' },
+  Paga:     { label: 'Pago ✓',               icon: CreditCard,   color: 'text-green-600 bg-green-500/10 border-green-400/30' },
+  Cancelada:{ label: 'Cancelado',            icon: X,            color: 'text-red-500 bg-red-500/10 border-red-400/30' },
 };
 
-const formasPagamento = ['Dinheiro', 'Transferência', 'PIX', 'Cartão', 'Boleto', 'Cheque'];
-
-const acaoLabel: Record<string, string> = {
-  CRIADA: 'Lançamento registrado',
-  STATUS_ALTERADO: 'Status atualizado',
-};
+const formasPagamento = ['PIX', 'Dinheiro', 'Transferência', 'Cartão', 'Boleto', 'Cheque'];
 
 interface LogEntry {
   id: string;
@@ -39,10 +34,7 @@ interface LogEntry {
   usuario_id: string;
 }
 
-interface UsuarioSimples {
-  id: string;
-  nome: string;
-}
+interface UsuarioSimples { id: string; nome: string; }
 
 export default function ContaDetalhePage() {
   const { id } = useParams<{ id: string }>();
@@ -98,7 +90,7 @@ export default function ContaDetalhePage() {
 
     const { error } = await supabase.from('contas_pagar').update(updates).eq('id', conta.id);
     if (error) {
-      toast.error('Erro ao atualizar. Tente novamente.');
+      toast.error('Erro ao atualizar');
       setActionLoading(false);
       return;
     }
@@ -111,7 +103,7 @@ export default function ContaDetalhePage() {
       status_novo: newStatus,
     });
 
-    toast.success(`Atualizado para: ${statusConfig[newStatus]?.label ?? newStatus}`);
+    toast.success(newStatus === 'Paga' ? '✓ Pagamento registrado!' : `Atualizado!`);
     fetchConta();
     setActionLoading(false);
   };
@@ -176,197 +168,187 @@ export default function ContaDetalhePage() {
     );
   }
 
-  const cfg = statusConfig[conta.status] ?? { label: conta.status, style: 'bg-muted text-muted-foreground' };
+  const cfg = statusConfig[conta.status] ?? { label: conta.status, icon: Clock, color: 'text-muted-foreground bg-muted' };
+  const StatusIcon = cfg.icon;
 
   return (
     <AppLayout>
-      <div className="space-y-5 animate-fade-in">
+      <div className="space-y-4 animate-fade-in">
 
-        {/* Header */}
-        <div className="flex items-start gap-3">
-          <button onClick={() => navigate(-1)} className="text-muted-foreground mt-1 active:scale-90">
-            <ArrowLeft size={20} />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h2 className="page-title leading-tight">{conta.descricao}</h2>
-            <div className="flex items-center gap-2 mt-1.5">
-              <span className={cn('text-[10px] font-semibold px-2.5 py-1 rounded-full border', cfg.style)}>
-                {cfg.label}
-              </span>
-              <span className="text-lg font-bold text-primary tabular-nums">
-                {fmt(Number(conta.valor))}
-              </span>
+        {/* Voltar */}
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground text-sm active:scale-90">
+          <ArrowLeft size={18} /> Voltar
+        </button>
+
+        {/* Card principal — descrição + valor + status */}
+        <div className="section-card !space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-bold leading-tight">{conta.descricao}</h2>
+              {conta.categoria && <p className="text-[11px] text-muted-foreground mt-0.5">{conta.categoria}</p>}
             </div>
+            <p className="text-xl font-bold text-primary tabular-nums shrink-0">
+              {fmt(Number(conta.valor))}
+            </p>
           </div>
-        </div>
 
-        {/* Recorrente badge */}
-        {conta.recorrente && (
-          <div className="section-card !p-3 flex items-center gap-2 bg-blue-500/5 border-blue-400/30">
-            <RefreshCw size={16} className="text-blue-500" />
-            <span className="text-sm font-medium text-blue-600">
-              Conta recorrente · Vence todo dia {conta.dia_vencimento_recorrente}
-            </span>
+          {/* Status badge */}
+          <div className={cn('flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium', cfg.color)}>
+            <StatusIcon size={16} />
+            {cfg.label}
           </div>
-        )}
 
-        {/* Detalhes */}
-        <div className="section-card">
-          <p className="section-title flex items-center gap-2"><FileText size={14} /> DETALHES</p>
-          <div className="space-y-2.5 text-sm">
-            <Row label="O que é" value={conta.descricao} />
-            {conta.categoria && <Row label="Categoria" value={conta.categoria} />}
-            <Row label="Valor" value={fmt(Number(conta.valor))} />
-            <Row label={conta.status === 'Paga' ? 'Data do pagamento' : 'Vencimento'} value={fmtData(conta.data_pagamento ?? conta.data_vencimento)} />
-            {conta.forma_pagamento && <Row label="Forma de pagamento" value={conta.forma_pagamento} />}
-            {conta.chave_pix && <Row label="Chave PIX" value={conta.chave_pix} />}
+          {/* Info rápida */}
+          <div className="space-y-2 text-sm">
+            <InfoRow label="Vencimento" value={fmtData(conta.data_vencimento)} />
+            {conta.data_pagamento && <InfoRow label="Pago em" value={fmtData(conta.data_pagamento)} />}
+            {conta.forma_pagamento && <InfoRow label="Forma" value={conta.forma_pagamento} />}
+            {conta.chave_pix && <InfoRow label="Chave PIX" value={conta.chave_pix} />}
+            <InfoRow label="Registrado por" value={getNome(conta.criado_por) ?? '—'} />
+            {conta.aprovado_por && <InfoRow label="Aprovado por" value={getNome(conta.aprovado_por) ?? '—'} />}
+            {conta.pago_por && <InfoRow label="Pago por" value={getNome(conta.pago_por) ?? '—'} />}
           </div>
+
+          {conta.recorrente && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-500/5 rounded-lg px-3 py-2">
+              <RefreshCw size={14} />
+              Recorrente · vence todo dia {conta.dia_vencimento_recorrente}
+            </div>
+          )}
         </div>
 
         {/* Motivo */}
         <div className="section-card">
-          <p className="section-title flex items-center gap-2"><MessageSquare size={14} /> MOTIVO</p>
+          <p className="section-title">Por que esse gasto?</p>
           <p className="text-sm leading-relaxed">{conta.motivo}</p>
-        </div>
-
-        {/* Responsáveis */}
-        <div className="section-card">
-          <p className="section-title flex items-center gap-2"><Clock size={14} /> RESPONSÁVEIS</p>
-          <div className="space-y-2.5 text-sm">
-            <Row label="Situação atual" value={cfg.label} />
-            <Row label="Registrado em" value={fmtDateTime(conta.criado_em)} />
-            <Row label="Registrado por" value={getNome(conta.criado_por) ?? '—'} />
-            {conta.aprovado_por && <Row label="Aprovado por" value={getNome(conta.aprovado_por) ?? '—'} />}
-            {conta.pago_por && <Row label="Pago por" value={getNome(conta.pago_por) ?? '—'} />}
-            {conta.data_pagamento && <Row label="Pago em" value={fmtData(conta.data_pagamento)} />}
-          </div>
+          {conta.observacoes && (
+            <p className="text-[11px] text-muted-foreground mt-2">{conta.observacoes}</p>
+          )}
         </div>
 
         {/* Comprovante */}
         <div className="section-card">
-          <p className="section-title flex items-center gap-2"><Paperclip size={14} /> COMPROVANTE</p>
+          <p className="section-title flex items-center gap-2"><Paperclip size={14} /> Comprovante</p>
           <FileUpload
             contaId={conta.id}
             currentUrl={conta.comprovante_url}
             onUploaded={(url) => setConta({ ...conta, comprovante_url: url })}
           />
-          {conta.observacoes && (
-            <p className="text-sm text-muted-foreground mt-2">{conta.observacoes}</p>
-          )}
         </div>
 
         {/* Gerar PDF */}
         {(conta.status === 'Paga' || conta.status === 'Aprovada') && (
           <button
             onClick={handleGerarPdf}
-            className="w-full h-12 rounded-xl border border-border bg-card flex items-center justify-center gap-2 text-sm font-medium text-foreground shadow-sm active:scale-[0.98] transition-transform"
+            className="w-full h-12 rounded-xl border border-border bg-card flex items-center justify-center gap-2 text-sm font-medium shadow-sm active:scale-[0.98] transition-transform"
           >
-            <Download size={16} /> Gerar documento (PDF)
+            <Download size={16} /> Baixar documento (PDF)
           </button>
+        )}
+
+        {/* ========== AÇÕES ========== */}
+        {isAdmin && conta.status === 'Lancada' && (
+          <div className="section-card !space-y-3">
+            <p className="section-title">O que deseja fazer?</p>
+            <Button
+              onClick={() => changeStatus('Aprovada')}
+              disabled={actionLoading}
+              className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
+            >
+              <Check size={16} className="mr-2" /> Aprovar esta conta
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => changeStatus('Cancelada')}
+              disabled={actionLoading}
+              className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
+            >
+              <X size={16} className="mr-2" /> Recusar
+            </Button>
+          </div>
+        )}
+
+        {isAdmin && conta.status === 'Aprovada' && (
+          <div className="section-card !space-y-4">
+            <p className="section-title">Registrar pagamento</p>
+            <p className="text-[11px] text-muted-foreground">
+              Preencha como foi pago e clique em confirmar.
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="label-micro">Como foi pago?</label>
+              <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                <SelectTrigger className="h-12 bg-background rounded-xl">
+                  <SelectValue placeholder="Escolha a forma..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {formasPagamento.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {formaPagamento === 'PIX' && (
+              <div className="space-y-1.5">
+                <label className="label-micro">Chave PIX usada</label>
+                <Input
+                  placeholder="CPF, e-mail, telefone ou chave aleatória"
+                  value={chavePix}
+                  onChange={e => setChavePix(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <label className="label-micro">Quem pagou?</label>
+              <UserSelect
+                value={pagoPor || usuario?.id || ''}
+                onChange={setPagoPor}
+                placeholder="Selecionar quem pagou..."
+              />
+            </div>
+
+            <Button
+              onClick={() => changeStatus('Paga')}
+              disabled={actionLoading}
+              className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
+            >
+              <CreditCard size={16} className="mr-2" /> Confirmar pagamento
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => changeStatus('Cancelada')}
+              disabled={actionLoading}
+              className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
+            >
+              <X size={16} className="mr-2" /> Cancelar conta
+            </Button>
+          </div>
         )}
 
         {/* Histórico */}
         {logs.length > 0 && (
           <div className="section-card">
-            <p className="section-title flex items-center gap-2"><History size={14} /> HISTÓRICO</p>
+            <p className="section-title flex items-center gap-2"><History size={14} /> Histórico</p>
             <div className="space-y-2">
               {logs.map(log => (
                 <div key={log.id} className="text-xs border-l-2 border-primary/30 pl-3 py-1.5">
                   <p className="text-muted-foreground">{fmtDateTime(log.criado_em)}</p>
                   <p className="font-medium">
-                    {acaoLabel[log.acao] ?? log.acao}
+                    {log.acao === 'CRIADA' ? 'Conta registrada' : 'Status atualizado'}
                     {log.status_anterior && log.status_novo && (
                       <span className="text-muted-foreground font-normal">
-                        {' · '}
-                        {statusConfig[log.status_anterior]?.label ?? log.status_anterior}
-                        {' → '}
-                        {statusConfig[log.status_novo]?.label ?? log.status_novo}
+                        {' · '}{statusConfig[log.status_anterior]?.label ?? log.status_anterior}
+                        {' → '}{statusConfig[log.status_novo]?.label ?? log.status_novo}
                       </span>
                     )}
                   </p>
-                  {log.observacao && <p className="text-muted-foreground">{log.observacao}</p>}
-                  <p className="text-muted-foreground">por {getNome(log.usuario_id) ?? 'Usuário'}</p>
+                  <p className="text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <User size={10} /> {getNome(log.usuario_id) ?? 'Usuário'}
+                  </p>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Ações — somente admin */}
-        {isAdmin && (conta.status === 'Lancada' || conta.status === 'Aprovada') && (
-          <div className="section-card">
-            <p className="section-title">AÇÕES</p>
-            <div className="space-y-3">
-              {conta.status === 'Lancada' && (
-                <>
-                  <Button
-                    onClick={() => changeStatus('Aprovada')}
-                    disabled={actionLoading}
-                    className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
-                  >
-                    <Check size={16} className="mr-2" /> Aprovar conta
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => changeStatus('Cancelada')}
-                    disabled={actionLoading}
-                    className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
-                  >
-                    <X size={16} className="mr-2" /> Recusar / Cancelar
-                  </Button>
-                </>
-              )}
-
-              {conta.status === 'Aprovada' && (
-                <>
-                  <div className="space-y-1.5">
-                    <label className="label-micro">Como foi / será pago?</label>
-                    <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                      <SelectTrigger className="h-12 bg-background rounded-xl">
-                        <SelectValue placeholder="Selecione a forma de pagamento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {formasPagamento.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {formaPagamento === 'PIX' && (
-                    <div className="space-y-1.5">
-                      <label className="label-micro">Chave PIX</label>
-                      <Input
-                        placeholder="CPF, e-mail, telefone ou chave aleatória"
-                        value={chavePix}
-                        onChange={e => setChavePix(e.target.value)}
-                        className="form-input"
-                      />
-                    </div>
-                  )}
-
-                  <UserSelect
-                    value={pagoPor || usuario?.id || ''}
-                    onChange={setPagoPor}
-                    label="Quem está pagando?"
-                    placeholder="Selecionar quem pagou..."
-                  />
-
-                  <Button
-                    onClick={() => changeStatus('Paga')}
-                    disabled={actionLoading}
-                    className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
-                  >
-                    <CreditCard size={16} className="mr-2" /> Confirmar pagamento
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => changeStatus('Cancelada')}
-                    disabled={actionLoading}
-                    className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
-                  >
-                    <X size={16} className="mr-2" /> Cancelar
-                  </Button>
-                </>
-              )}
             </div>
           </div>
         )}
@@ -377,7 +359,7 @@ export default function ContaDetalhePage() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-2">
       <span className="text-muted-foreground">{label}</span>
