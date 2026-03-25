@@ -3,13 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { ArrowLeft, Check, X, CreditCard, Clock, FileText, MessageSquare, Paperclip, History } from 'lucide-react';
+import { ArrowLeft, Check, X, CreditCard, Clock, FileText, MessageSquare, Paperclip, History, Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import AppLayout from '@/components/AppLayout';
+import UserSelect from '@/components/UserSelect';
+import FileUpload from '@/components/FileUpload';
+import { gerarPdfConta } from '@/lib/gerarPdfConta';
 
 const statusConfig: Record<string, { label: string; style: string }> = {
   Lancada:  { label: 'Aguardando revisão', style: 'bg-yellow-500/15 text-yellow-600 border-yellow-400/30' },
@@ -35,6 +39,11 @@ interface LogEntry {
   usuario_id: string;
 }
 
+interface UsuarioSimples {
+  id: string;
+  nome: string;
+}
+
 export default function ContaDetalhePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -43,9 +52,20 @@ export default function ContaDetalhePage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [formaPagamento, setFormaPagamento] = useState('');
+  const [chavePix, setChavePix] = useState('');
+  const [pagoPor, setPagoPor] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [usuarios, setUsuarios] = useState<UsuarioSimples[]>([]);
 
-  useEffect(() => { if (id) fetchConta(); }, [id]);
+  useEffect(() => {
+    if (id) fetchConta();
+    fetchUsuarios();
+  }, [id]);
+
+  const fetchUsuarios = async () => {
+    const { data } = await supabase.from('usuarios').select('id, nome').order('nome');
+    if (data) setUsuarios(data);
+  };
 
   const fetchConta = async () => {
     setLoading(true);
@@ -58,6 +78,11 @@ export default function ContaDetalhePage() {
     setLoading(false);
   };
 
+  const getNome = (userId: string | null) => {
+    if (!userId) return null;
+    return usuarios.find(u => u.id === userId)?.nome ?? null;
+  };
+
   const changeStatus = async (newStatus: string) => {
     if (!conta || !usuario) return;
     setActionLoading(true);
@@ -65,9 +90,10 @@ export default function ContaDetalhePage() {
     const updates: any = { status: newStatus, atualizado_em: new Date().toISOString() };
     if (newStatus === 'Aprovada') updates.aprovado_por = usuario.id;
     if (newStatus === 'Paga') {
-      updates.pago_por = usuario.id;
+      updates.pago_por = pagoPor || usuario.id;
       updates.data_pagamento = new Date().toISOString().split('T')[0];
       if (formaPagamento) updates.forma_pagamento = formaPagamento;
+      if (formaPagamento === 'PIX' && chavePix.trim()) updates.chave_pix = chavePix.trim();
     }
 
     const { error } = await supabase.from('contas_pagar').update(updates).eq('id', conta.id);
@@ -88,6 +114,27 @@ export default function ContaDetalhePage() {
     toast.success(`Atualizado para: ${statusConfig[newStatus]?.label ?? newStatus}`);
     fetchConta();
     setActionLoading(false);
+  };
+
+  const handleGerarPdf = () => {
+    if (!conta) return;
+    gerarPdfConta({
+      descricao: conta.descricao,
+      valor: Number(conta.valor),
+      categoria: conta.categoria,
+      motivo: conta.motivo,
+      status: conta.status,
+      data_vencimento: conta.data_vencimento,
+      data_pagamento: conta.data_pagamento,
+      forma_pagamento: conta.forma_pagamento,
+      chave_pix: conta.chave_pix,
+      comprovante_url: conta.comprovante_url,
+      criado_em: conta.criado_em,
+      observacoes: conta.observacoes,
+      criado_por_nome: getNome(conta.criado_por) ?? undefined,
+      aprovado_por_nome: getNome(conta.aprovado_por) ?? undefined,
+      pago_por_nome: getNome(conta.pago_por) ?? undefined,
+    });
   };
 
   const fmt = (v: number) =>
@@ -153,6 +200,16 @@ export default function ContaDetalhePage() {
           </div>
         </div>
 
+        {/* Recorrente badge */}
+        {conta.recorrente && (
+          <div className="section-card !p-3 flex items-center gap-2 bg-blue-500/5 border-blue-400/30">
+            <RefreshCw size={16} className="text-blue-500" />
+            <span className="text-sm font-medium text-blue-600">
+              Conta recorrente · Vence todo dia {conta.dia_vencimento_recorrente}
+            </span>
+          </div>
+        )}
+
         {/* Detalhes */}
         <div className="section-card">
           <p className="section-title flex items-center gap-2"><FileText size={14} /> DETALHES</p>
@@ -162,6 +219,7 @@ export default function ContaDetalhePage() {
             <Row label="Valor" value={fmt(Number(conta.valor))} />
             <Row label={conta.status === 'Paga' ? 'Data do pagamento' : 'Vencimento'} value={fmtData(conta.data_pagamento ?? conta.data_vencimento)} />
             {conta.forma_pagamento && <Row label="Forma de pagamento" value={conta.forma_pagamento} />}
+            {conta.chave_pix && <Row label="Chave PIX" value={conta.chave_pix} />}
           </div>
         </div>
 
@@ -171,30 +229,40 @@ export default function ContaDetalhePage() {
           <p className="text-sm leading-relaxed">{conta.motivo}</p>
         </div>
 
-        {/* Situação */}
+        {/* Responsáveis */}
         <div className="section-card">
-          <p className="section-title flex items-center gap-2"><Clock size={14} /> SITUAÇÃO</p>
+          <p className="section-title flex items-center gap-2"><Clock size={14} /> RESPONSÁVEIS</p>
           <div className="space-y-2.5 text-sm">
             <Row label="Situação atual" value={cfg.label} />
             <Row label="Registrado em" value={fmtDateTime(conta.criado_em)} />
+            <Row label="Registrado por" value={getNome(conta.criado_por) ?? '—'} />
+            {conta.aprovado_por && <Row label="Aprovado por" value={getNome(conta.aprovado_por) ?? '—'} />}
+            {conta.pago_por && <Row label="Pago por" value={getNome(conta.pago_por) ?? '—'} />}
             {conta.data_pagamento && <Row label="Pago em" value={fmtData(conta.data_pagamento)} />}
           </div>
         </div>
 
-        {/* Comprovante / obs */}
-        {(conta.comprovante_url || conta.observacoes) && (
-          <div className="section-card">
-            <p className="section-title flex items-center gap-2"><Paperclip size={14} /> COMPROVANTE E OBSERVAÇÕES</p>
-            {conta.comprovante_url && (
-              <a href={conta.comprovante_url} target="_blank" rel="noopener"
-                className="text-sm text-primary underline break-all block">
-                Ver comprovante →
-              </a>
-            )}
-            {conta.observacoes && (
-              <p className="text-sm text-muted-foreground mt-1">{conta.observacoes}</p>
-            )}
-          </div>
+        {/* Comprovante */}
+        <div className="section-card">
+          <p className="section-title flex items-center gap-2"><Paperclip size={14} /> COMPROVANTE</p>
+          <FileUpload
+            contaId={conta.id}
+            currentUrl={conta.comprovante_url}
+            onUploaded={(url) => setConta({ ...conta, comprovante_url: url })}
+          />
+          {conta.observacoes && (
+            <p className="text-sm text-muted-foreground mt-2">{conta.observacoes}</p>
+          )}
+        </div>
+
+        {/* Gerar PDF */}
+        {(conta.status === 'Paga' || conta.status === 'Aprovada') && (
+          <button
+            onClick={handleGerarPdf}
+            className="w-full h-12 rounded-xl border border-border bg-card flex items-center justify-center gap-2 text-sm font-medium text-foreground shadow-sm active:scale-[0.98] transition-transform"
+          >
+            <Download size={16} /> Gerar documento (PDF)
+          </button>
         )}
 
         {/* Histórico */}
@@ -217,6 +285,7 @@ export default function ContaDetalhePage() {
                     )}
                   </p>
                   {log.observacao && <p className="text-muted-foreground">{log.observacao}</p>}
+                  <p className="text-muted-foreground">por {getNome(log.usuario_id) ?? 'Usuário'}</p>
                 </div>
               ))}
             </div>
@@ -261,6 +330,26 @@ export default function ContaDetalhePage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {formaPagamento === 'PIX' && (
+                    <div className="space-y-1.5">
+                      <label className="label-micro">Chave PIX</label>
+                      <Input
+                        placeholder="CPF, e-mail, telefone ou chave aleatória"
+                        value={chavePix}
+                        onChange={e => setChavePix(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                  )}
+
+                  <UserSelect
+                    value={pagoPor || usuario?.id || ''}
+                    onChange={setPagoPor}
+                    label="Quem está pagando?"
+                    placeholder="Selecionar quem pagou..."
+                  />
+
                   <Button
                     onClick={() => changeStatus('Paga')}
                     disabled={actionLoading}
