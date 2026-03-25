@@ -17,21 +17,22 @@ export default function PerfilPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 animate-fade-in">
-        <h2 className="text-xl font-bold">Perfil</h2>
+      <div className="space-y-5 animate-fade-in">
+        <h2 className="page-title">Perfil</h2>
 
-        <div className="section-card items-center flex flex-col py-8">
-          <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mb-3">
-            <User size={28} className="text-primary-foreground" />
+        <div className="section-card items-center flex flex-col py-10">
+          <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center mb-4 shadow-lg">
+            <User size={32} className="text-primary-foreground" />
           </div>
-          <p className="text-lg font-bold">{usuario?.nome || '—'}</p>
-          <div className="flex items-center gap-1 mt-1">
+          <p className="text-xl font-bold">{usuario?.nome || '—'}</p>
+          <div className="flex items-center gap-1.5 mt-2">
             <Shield size={14} className="text-primary" />
             <span className="text-sm text-primary font-medium">{tipoLabel}</span>
           </div>
         </div>
 
         <div className="section-card">
+          <p className="section-title">INFORMAÇÕES</p>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">ID</span>
             <span className="font-mono text-xs text-muted-foreground">{usuario?.id?.slice(0, 8)}...</span>

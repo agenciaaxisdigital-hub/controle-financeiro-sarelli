@@ -5,7 +5,7 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 14% 96%;
     --foreground: 220 20% 15%;
     --card: 0 0% 100%;
     --card-foreground: 220 20% 15%;
@@ -15,14 +15,14 @@
     --primary-foreground: 0 0% 100%;
     --secondary: 340 30% 96%;
     --secondary-foreground: 220 20% 25%;
-    --muted: 220 10% 96%;
+    --muted: 220 14% 96%;
     --muted-foreground: 220 10% 45%;
     --accent: 340 82% 55%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 10% 90%;
-    --input: 220 10% 90%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: 340 82% 55%;
     --radius: 0.75rem;
     --sidebar-background: 0 0% 98%;
@@ -33,7 +33,6 @@
     --sidebar-accent-foreground: 220 20% 25%;
     --sidebar-border: 220 10% 90%;
     --sidebar-ring: 340 82% 55%;
-
   }
 
   .dark {
@@ -56,7 +55,6 @@
     --border: 240 8% 16%;
     --input: 240 8% 16%;
     --ring: 340 82% 60%;
-
   }
 }
 
@@ -91,19 +89,19 @@
 
 @layer utilities {
   .gradient-primary {
-    @apply bg-gradient-to-r from-pink-500 to-rose-400;
+    @apply bg-gradient-to-r from-primary to-rose-400;
   }
   .gradient-header {
-    @apply bg-gradient-to-r from-pink-500 via-rose-400 to-pink-300;
+    @apply bg-gradient-to-r from-primary via-rose-400 to-pink-300;
   }
   .section-card {
-    @apply bg-card rounded-2xl border border-border p-4 space-y-3;
+    @apply bg-card rounded-2xl border border-border p-5 space-y-3 shadow-sm;
   }
   .section-title {
-    @apply text-sm font-semibold text-primary uppercase tracking-wider;
+    @apply text-sm font-bold text-primary uppercase tracking-wider;
   }
   .label-micro {
-    @apply text-[11px] uppercase tracking-widest text-muted-foreground;
+    @apply text-[11px] uppercase tracking-widest text-muted-foreground font-medium;
   }
   .text-micro {
     @apply text-[10px] text-muted-foreground;
@@ -126,6 +124,30 @@
 
   .brand-pulse-glow {
     animation: brand-pulse-glow 2.6s ease-in-out infinite;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-foreground;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .form-input {
+    @apply h-12 bg-background rounded-xl border border-input text-sm;
+  }
+
+  .form-select {
+    @apply w-full h-12 rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring;
+  }
+
+  .btn-primary {
+    @apply w-full h-12 rounded-xl font-semibold text-primary-foreground gradient-primary shadow-lg active:scale-[0.97] transition-transform disabled:opacity-60;
+  }
+
+  .btn-outline {
+    @apply w-full h-12 rounded-xl font-medium text-muted-foreground bg-transparent border border-border active:scale-[0.97] transition-transform;
   }
 }
 
