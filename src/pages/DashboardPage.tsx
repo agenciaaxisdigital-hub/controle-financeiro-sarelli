@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, AlertTriangle } from 'lucide-react';
+import { Plus, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import AppLayout from '@/components/AppLayout';
 
@@ -17,6 +17,7 @@ interface ContaPagar {
   status: string;
   criado_em: string;
   fornecedor_nome_livre: string | null;
+  recorrente: boolean | null;
 }
 
 const statusConfig: Record<string, { label: string; style: string }> = {
@@ -44,16 +45,22 @@ export default function DashboardPage() {
   const [contas, setContas] = useState<ContaPagar[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroIdx, setFiltroIdx] = useState(0);
+  const [mesAtual, setMesAtual] = useState(new Date());
   const [stats, setStats] = useState({ aberto: 0, vencendo7d: 0, vencidas: 0, pagasMes: 0 });
 
-  useEffect(() => { fetchContas(); }, [usuario]);
+  useEffect(() => { fetchContas(); }, [usuario, mesAtual]);
 
   const fetchContas = async () => {
     if (!usuario) return;
     setLoading(true);
+    const inicio = format(startOfMonth(mesAtual), 'yyyy-MM-dd');
+    const fim = format(endOfMonth(mesAtual), 'yyyy-MM-dd');
+
     const { data, error } = await supabase
       .from('contas_pagar')
-      .select('id, descricao, categoria, valor, data_vencimento, status, criado_em, fornecedor_nome_livre')
+      .select('id, descricao, categoria, valor, data_vencimento, status, criado_em, fornecedor_nome_livre, recorrente')
+      .gte('data_vencimento', inicio)
+      .lte('data_vencimento', fim)
       .order('data_vencimento', { ascending: true });
 
     if (!error && data) {
@@ -66,7 +73,6 @@ export default function DashboardPage() {
   const calcStats = (data: ContaPagar[]) => {
     const now = new Date();
     const in7days = new Date(); in7days.setDate(now.getDate() + 7);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const aberto = data
       .filter(c => c.status === 'Lancada' || c.status === 'Aprovada')
@@ -87,7 +93,7 @@ export default function DashboardPage() {
       .reduce((s, c) => s + Number(c.valor), 0);
 
     const pagasMes = data
-      .filter(c => c.status === 'Paga' && new Date(c.criado_em) >= monthStart)
+      .filter(c => c.status === 'Paga')
       .reduce((s, c) => s + Number(c.valor), 0);
 
     setStats({ aberto, vencendo7d, vencidas, pagasMes });
@@ -105,6 +111,8 @@ export default function DashboardPage() {
     try { return format(new Date(d + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR }); }
     catch { return d; }
   };
+
+  const mesLabel = format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR });
 
   const totalAPagar = contas
     .filter(c => c.status === 'Lancada' || c.status === 'Aprovada')
@@ -126,6 +134,23 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Seletor de mês */}
+        <div className="section-card !p-3 flex items-center justify-between">
+          <button
+            onClick={() => setMesAtual(subMonths(mesAtual, 1))}
+            className="p-2 rounded-lg text-muted-foreground hover:bg-muted active:scale-90 transition-all"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <span className="text-sm font-semibold capitalize">{mesLabel}</span>
+          <button
+            onClick={() => setMesAtual(addMonths(mesAtual, 1))}
+            className="p-2 rounded-lg text-muted-foreground hover:bg-muted active:scale-90 transition-all"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
         {/* Resumo */}
         {isAdmin ? (
           <div className="grid grid-cols-2 gap-3">
@@ -133,7 +158,7 @@ export default function DashboardPage() {
               { label: 'Total a pagar', value: stats.aberto, color: 'text-yellow-500' },
               { label: 'Vence em 7 dias', value: stats.vencendo7d, color: 'text-blue-500' },
               { label: 'Atrasados', value: stats.vencidas, color: 'text-red-500' },
-              { label: 'Pago este mês', value: stats.pagasMes, color: 'text-green-500' },
+              { label: 'Pago no mês', value: stats.pagasMes, color: 'text-green-500' },
             ].map(s => (
               <div key={s.label} className="section-card !p-4">
                 <p className="label-micro">{s.label}</p>
@@ -188,7 +213,7 @@ export default function DashboardPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="section-card text-center py-12 space-y-2">
-            <p className="text-muted-foreground text-sm">Nenhum registro encontrado</p>
+            <p className="text-muted-foreground text-sm">Nenhum registro neste mês</p>
             <button
               onClick={() => navigate('/nova-conta')}
               className="text-primary text-sm font-semibold"
@@ -215,6 +240,7 @@ export default function DashboardPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         {vencida && <AlertTriangle size={13} className="text-red-500 shrink-0" />}
+                        {conta.recorrente && <span className="text-[10px] text-blue-500">🔄</span>}
                         <p className="font-semibold text-sm truncate">{conta.descricao}</p>
                       </div>
                       <p className="text-micro mt-0.5">
