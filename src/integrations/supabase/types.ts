@@ -268,6 +268,7 @@ export type Database = {
           aprovado_por: string | null
           atualizado_em: string
           categoria: string | null
+          chave_pix: string | null
           comprovante_url: string | null
           criado_em: string
           criado_por: string | null
@@ -275,6 +276,7 @@ export type Database = {
           data_pagamento: string | null
           data_vencimento: string
           descricao: string
+          dia_vencimento_recorrente: number | null
           forma_pagamento: string | null
           fornecedor_id: string | null
           fornecedor_nome_livre: string | null
@@ -282,6 +284,7 @@ export type Database = {
           motivo: string
           observacoes: string | null
           pago_por: string | null
+          recorrente: boolean | null
           status: string
           subcategoria: string | null
           valor: number
@@ -290,6 +293,7 @@ export type Database = {
           aprovado_por?: string | null
           atualizado_em?: string
           categoria?: string | null
+          chave_pix?: string | null
           comprovante_url?: string | null
           criado_em?: string
           criado_por?: string | null
@@ -297,6 +301,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento: string
           descricao: string
+          dia_vencimento_recorrente?: number | null
           forma_pagamento?: string | null
           fornecedor_id?: string | null
           fornecedor_nome_livre?: string | null
@@ -304,6 +309,7 @@ export type Database = {
           motivo: string
           observacoes?: string | null
           pago_por?: string | null
+          recorrente?: boolean | null
           status?: string
           subcategoria?: string | null
           valor: number
@@ -312,6 +318,7 @@ export type Database = {
           aprovado_por?: string | null
           atualizado_em?: string
           categoria?: string | null
+          chave_pix?: string | null
           comprovante_url?: string | null
           criado_em?: string
           criado_por?: string | null
@@ -319,6 +326,7 @@ export type Database = {
           data_pagamento?: string | null
           data_vencimento?: string
           descricao?: string
+          dia_vencimento_recorrente?: number | null
           forma_pagamento?: string | null
           fornecedor_id?: string | null
           fornecedor_nome_livre?: string | null
@@ -326,6 +334,7 @@ export type Database = {
           motivo?: string
           observacoes?: string | null
           pago_por?: string | null
+          recorrente?: boolean | null
           status?: string
           subcategoria?: string | null
           valor?: number
