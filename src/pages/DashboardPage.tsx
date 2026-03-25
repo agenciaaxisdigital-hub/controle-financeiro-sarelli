@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, AlertTriangle, ChevronLeft, ChevronRight, Clock, CheckCircle2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,38 +15,16 @@ interface ContaPagar {
   valor: number;
   data_vencimento: string;
   status: string;
-  criado_em: string;
-  fornecedor_nome_livre: string | null;
   recorrente: boolean | null;
 }
-
-const statusConfig: Record<string, { label: string; style: string }> = {
-  Lancada:  { label: 'Aguardando',  style: 'bg-yellow-500/15 text-yellow-600 border-yellow-400/30' },
-  Aprovada: { label: 'A pagar',     style: 'bg-blue-500/15 text-blue-600 border-blue-400/30' },
-  Paga:     { label: 'Pago',        style: 'bg-green-500/15 text-green-600 border-green-400/30' },
-  Cancelada:{ label: 'Cancelado',   style: 'bg-red-500/15 text-red-500 border-red-400/30' },
-};
-
-const FILTROS = [
-  { label: 'Tudo',       statuses: [] },
-  { label: 'A pagar',    statuses: ['Lancada', 'Aprovada'] },
-  { label: 'Pago',       statuses: ['Paga'] },
-  { label: 'Cancelado',  statuses: ['Cancelada'] },
-];
-
-const isVencida = (conta: ContaPagar) => {
-  if (conta.status === 'Paga' || conta.status === 'Cancelada') return false;
-  return new Date(conta.data_vencimento + 'T00:00:00') < new Date();
-};
 
 export default function DashboardPage() {
   const { usuario, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [contas, setContas] = useState<ContaPagar[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filtroIdx, setFiltroIdx] = useState(0);
   const [mesAtual, setMesAtual] = useState(new Date());
-  const [stats, setStats] = useState({ aberto: 0, vencendo7d: 0, vencidas: 0, pagasMes: 0 });
+  const [aba, setAba] = useState<'pendente' | 'pago'>('pendente');
 
   useEffect(() => { fetchContas(); }, [usuario, mesAtual]);
 
@@ -56,149 +34,106 @@ export default function DashboardPage() {
     const inicio = format(startOfMonth(mesAtual), 'yyyy-MM-dd');
     const fim = format(endOfMonth(mesAtual), 'yyyy-MM-dd');
 
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('contas_pagar')
-      .select('id, descricao, categoria, valor, data_vencimento, status, criado_em, fornecedor_nome_livre, recorrente')
+      .select('id, descricao, categoria, valor, data_vencimento, status, recorrente')
       .gte('data_vencimento', inicio)
       .lte('data_vencimento', fim)
       .order('data_vencimento', { ascending: true });
 
-    if (!error && data) {
-      setContas(data as ContaPagar[]);
-      calcStats(data as ContaPagar[]);
-    }
+    if (data) setContas(data as ContaPagar[]);
     setLoading(false);
   };
 
-  const calcStats = (data: ContaPagar[]) => {
-    const now = new Date();
-    const in7days = new Date(); in7days.setDate(now.getDate() + 7);
+  const pendentes = contas.filter(c => c.status === 'Lancada' || c.status === 'Aprovada');
+  const pagos = contas.filter(c => c.status === 'Paga');
+  const lista = aba === 'pendente' ? pendentes : pagos;
 
-    const aberto = data
-      .filter(c => c.status === 'Lancada' || c.status === 'Aprovada')
-      .reduce((s, c) => s + Number(c.valor), 0);
+  const totalPendente = pendentes.reduce((s, c) => s + Number(c.valor), 0);
+  const totalPago = pagos.reduce((s, c) => s + Number(c.valor), 0);
 
-    const vencendo7d = data
-      .filter(c => {
-        const v = new Date(c.data_vencimento);
-        return (c.status === 'Lancada' || c.status === 'Aprovada') && v >= now && v <= in7days;
-      })
-      .reduce((s, c) => s + Number(c.valor), 0);
-
-    const vencidas = data
-      .filter(c => {
-        const v = new Date(c.data_vencimento);
-        return (c.status === 'Lancada' || c.status === 'Aprovada') && v < now;
-      })
-      .reduce((s, c) => s + Number(c.valor), 0);
-
-    const pagasMes = data
-      .filter(c => c.status === 'Paga')
-      .reduce((s, c) => s + Number(c.valor), 0);
-
-    setStats({ aberto, vencendo7d, vencidas, pagasMes });
+  const isVencida = (c: ContaPagar) => {
+    if (c.status === 'Paga' || c.status === 'Cancelada') return false;
+    return new Date(c.data_vencimento + 'T00:00:00') < new Date();
   };
-
-  const filtro = FILTROS[filtroIdx];
-  const filtered = filtro.statuses.length === 0
-    ? contas
-    : contas.filter(c => filtro.statuses.includes(c.status));
 
   const fmt = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
   const fmtData = (d: string) => {
-    try { return format(new Date(d + 'T00:00:00'), 'dd/MM/yyyy', { locale: ptBR }); }
+    try { return format(new Date(d + 'T00:00:00'), 'dd/MM', { locale: ptBR }); }
     catch { return d; }
   };
 
-  const mesLabel = format(mesAtual, "MMMM 'de' yyyy", { locale: ptBR });
-
-  const totalAPagar = contas
-    .filter(c => c.status === 'Lancada' || c.status === 'Aprovada')
-    .reduce((s, c) => s + Number(c.valor), 0);
-  const qtdAPagar = contas.filter(c => c.status === 'Lancada' || c.status === 'Aprovada').length;
-  const qtdVencidas = contas.filter(isVencida).length;
+  const mesLabel = format(mesAtual, "MMMM yyyy", { locale: ptBR });
 
   return (
     <AppLayout>
-      <div className="space-y-5 animate-fade-in">
+      <div className="space-y-4 animate-fade-in">
 
-        {/* Título */}
-        <div>
-          <h2 className="page-title">
-            {isAdmin ? 'Todas as contas' : 'Minhas contas'}
-          </h2>
-          <p className="page-subtitle">
-            {isAdmin ? 'Visão geral de todos os lançamentos' : 'Seus gastos registrados'}
-          </p>
-        </div>
-
-        {/* Seletor de mês */}
-        <div className="section-card !p-3 flex items-center justify-between">
+        {/* Seletor de mês — grande e claro */}
+        <div className="flex items-center justify-between">
           <button
             onClick={() => setMesAtual(subMonths(mesAtual, 1))}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-muted active:scale-90 transition-all"
+            className="p-2 rounded-xl text-muted-foreground hover:bg-muted active:scale-90 transition-all"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={22} />
           </button>
-          <span className="text-sm font-semibold capitalize">{mesLabel}</span>
+          <h2 className="text-lg font-bold capitalize">{mesLabel}</h2>
           <button
             onClick={() => setMesAtual(addMonths(mesAtual, 1))}
-            className="p-2 rounded-lg text-muted-foreground hover:bg-muted active:scale-90 transition-all"
+            className="p-2 rounded-xl text-muted-foreground hover:bg-muted active:scale-90 transition-all"
           >
-            <ChevronRight size={20} />
+            <ChevronRight size={22} />
           </button>
         </div>
 
-        {/* Resumo */}
-        {isAdmin ? (
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: 'Total a pagar', value: stats.aberto, color: 'text-yellow-500' },
-              { label: 'Vence em 7 dias', value: stats.vencendo7d, color: 'text-blue-500' },
-              { label: 'Atrasados', value: stats.vencidas, color: 'text-red-500' },
-              { label: 'Pago no mês', value: stats.pagasMes, color: 'text-green-500' },
-            ].map(s => (
-              <div key={s.label} className="section-card !p-4">
-                <p className="label-micro">{s.label}</p>
-                <p className={cn('text-lg font-bold tabular-nums', s.color)}>{fmt(s.value)}</p>
-              </div>
-            ))}
-          </div>
-        ) : qtdAPagar > 0 ? (
-          <div className={cn(
-            'section-card !p-4 flex items-center justify-between',
-            qtdVencidas > 0 ? 'border-red-400/40 bg-red-500/5' : 'border-yellow-400/30 bg-yellow-500/5',
-          )}>
-            <div>
-              <p className="text-sm font-semibold">
-                {qtdVencidas > 0
-                  ? `⚠️ ${qtdVencidas} conta${qtdVencidas > 1 ? 's' : ''} atrasada${qtdVencidas > 1 ? 's' : ''}!`
-                  : `${qtdAPagar} conta${qtdAPagar > 1 ? 's' : ''} a pagar`}
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Total: {fmt(totalAPagar)}</p>
+        {/* Resumo visual — 2 cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="section-card !p-4 !space-y-1">
+            <div className="flex items-center gap-1.5">
+              <Clock size={14} className="text-yellow-500" />
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Pendente</span>
             </div>
-            {qtdVencidas > 0 && <AlertTriangle size={22} className="text-red-500 shrink-0" />}
+            <p className="text-xl font-bold text-yellow-600 tabular-nums">{fmt(totalPendente)}</p>
+            <p className="text-[11px] text-muted-foreground">{pendentes.length} conta{pendentes.length !== 1 ? 's' : ''}</p>
           </div>
-        ) : null}
+          <div className="section-card !p-4 !space-y-1">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 size={14} className="text-green-500" />
+              <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Pago</span>
+            </div>
+            <p className="text-xl font-bold text-green-600 tabular-nums">{fmt(totalPago)}</p>
+            <p className="text-[11px] text-muted-foreground">{pagos.length} conta{pagos.length !== 1 ? 's' : ''}</p>
+          </div>
+        </div>
 
-        {/* Filtros */}
-        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {FILTROS.map((f, idx) => (
-            <button
-              key={f.label}
-              onClick={() => setFiltroIdx(idx)}
-              className={cn(
-                'px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 border',
-                filtroIdx === idx
-                  ? 'gradient-primary text-primary-foreground border-transparent shadow-md'
-                  : 'bg-card text-muted-foreground border-border',
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
+        {/* Abas Pendente / Pago */}
+        <div className="grid grid-cols-2 gap-2 p-1.5 bg-card rounded-2xl border border-border">
+          <button
+            onClick={() => setAba('pendente')}
+            className={cn(
+              'flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all',
+              aba === 'pendente'
+                ? 'gradient-primary text-primary-foreground shadow-md'
+                : 'text-muted-foreground'
+            )}
+          >
+            <Clock size={15} />
+            Pendentes ({pendentes.length})
+          </button>
+          <button
+            onClick={() => setAba('pago')}
+            className={cn(
+              'flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all',
+              aba === 'pago'
+                ? 'gradient-primary text-primary-foreground shadow-md'
+                : 'text-muted-foreground'
+            )}
+          >
+            <CheckCircle2 size={15} />
+            Pagos ({pagos.length})
+          </button>
         </div>
 
         {/* Lista */}
@@ -211,53 +146,48 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="section-card text-center py-12 space-y-2">
-            <p className="text-muted-foreground text-sm">Nenhum registro neste mês</p>
-            <button
-              onClick={() => navigate('/nova-conta')}
-              className="text-primary text-sm font-semibold"
-            >
-              + Registrar novo gasto
-            </button>
+        ) : lista.length === 0 ? (
+          <div className="section-card text-center py-10 space-y-2">
+            <p className="text-3xl">{aba === 'pendente' ? '🎉' : '📋'}</p>
+            <p className="text-sm font-medium">
+              {aba === 'pendente' ? 'Nenhuma conta pendente!' : 'Nenhum pagamento neste mês'}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {aba === 'pendente' ? 'Tudo em dia por aqui' : 'Os pagamentos aparecerão aqui'}
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((conta, i) => {
+          <div className="space-y-2">
+            {lista.map((conta, i) => {
               const vencida = isVencida(conta);
-              const cfg = statusConfig[conta.status] ?? { label: conta.status, style: 'bg-muted text-muted-foreground' };
               return (
                 <button
                   key={conta.id}
                   onClick={() => navigate(`/conta/${conta.id}`)}
                   className={cn(
-                    'section-card w-full text-left active:scale-[0.98] transition-transform',
+                    'section-card w-full text-left active:scale-[0.98] transition-transform !p-4 !space-y-0',
                     vencida && 'border-red-400/40',
                   )}
-                  style={{ animationDelay: `${i * 50}ms` }}
+                  style={{ animationDelay: `${i * 40}ms` }}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         {vencida && <AlertTriangle size={13} className="text-red-500 shrink-0" />}
-                        {conta.recorrente && <span className="text-[10px] text-blue-500">🔄</span>}
+                        {conta.recorrente && <RefreshCw size={11} className="text-blue-500 shrink-0" />}
                         <p className="font-semibold text-sm truncate">{conta.descricao}</p>
                       </div>
-                      <p className="text-micro mt-0.5">
-                        {conta.status === 'Paga' ? 'Pago' : 'Vence'}: {fmtData(conta.data_vencimento)}
-                        {' · '}
-                        <span className="font-medium text-foreground">{fmt(Number(conta.valor))}</span>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {vencida ? '⚠️ Vencida' : aba === 'pago' ? 'Pago' : `Vence ${fmtData(conta.data_vencimento)}`}
+                        {conta.categoria && ` · ${conta.categoria}`}
                       </p>
-                      {conta.categoria && (
-                        <p className="text-micro">{conta.categoria}</p>
-                      )}
                     </div>
-                    <span className={cn(
-                      'text-[10px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0',
-                      cfg.style,
+                    <p className={cn(
+                      'text-sm font-bold tabular-nums shrink-0',
+                      aba === 'pago' ? 'text-green-600' : vencida ? 'text-red-500' : 'text-foreground'
                     )}>
-                      {cfg.label}
-                    </span>
+                      {fmt(Number(conta.valor))}
+                    </p>
                   </div>
                 </button>
               );
@@ -266,7 +196,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* FAB */}
+      {/* Botão flutuante */}
       <button
         onClick={() => navigate('/nova-conta')}
         className="fixed bottom-20 right-4 w-14 h-14 rounded-full gradient-primary shadow-lg flex items-center justify-center active:scale-90 transition-transform z-40"

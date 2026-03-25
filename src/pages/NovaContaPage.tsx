@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { ArrowLeft, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import AppLayout from '@/components/AppLayout';
 import UserSelect from '@/components/UserSelect';
 
@@ -15,91 +15,46 @@ const categorias = [
   'Serviços (jurídico, contábil, etc.)', 'Outros',
 ];
 
-const formasPagamento = ['Dinheiro', 'Transferência', 'PIX', 'Cartão', 'Boleto', 'Cheque'];
-
 export default function NovaContaPage() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [jaPaguei, setJaPaguei] = useState(false);
 
-  const [form, setForm] = useState({
-    descricao: '',
-    categoria: '',
-    valor: '',
-    data_vencimento: '',
-    data_pagamento: '',
-    forma_pagamento: '',
-    chave_pix: '',
-    motivo: '',
-    observacoes: '',
-    comprovante_url: '',
-    recorrente: false,
-    dia_vencimento_recorrente: '',
-    criado_por: '',
-  });
+  const [descricao, setDescricao] = useState('');
+  const [valor, setValor] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [dataVencimento, setDataVencimento] = useState('');
+  const [motivo, setMotivo] = useState('');
+  const [recorrente, setRecorrente] = useState(false);
+  const [diaRecorrente, setDiaRecorrente] = useState('');
+  const [criadoPor, setCriadoPor] = useState('');
 
-  const set = (field: string, value: string | boolean) =>
-    setForm(prev => ({ ...prev, [field]: value }));
-
-  // Set default criado_por when usuario loads
-  const criadoPor = form.criado_por || usuario?.id || '';
+  const responsavel = criadoPor || usuario?.id || '';
 
   const handleSubmit = async () => {
-    if (!form.descricao.trim()) {
-      toast.error('Descreva o que foi comprado/pago');
-      return;
-    }
-    if (!form.valor) {
-      toast.error('Informe o valor');
-      return;
-    }
-    if (!jaPaguei && !form.data_vencimento) {
-      toast.error('Informe a data de vencimento');
-      return;
-    }
-    if (jaPaguei && !form.data_pagamento) {
-      toast.error('Informe a data em que foi pago');
-      return;
-    }
-    if (!form.motivo.trim()) {
-      toast.error('Explique por que esse gasto foi necessário');
-      return;
-    }
-    if (!usuario) {
-      toast.error('Usuário não identificado');
-      return;
-    }
+    if (!descricao.trim()) return toast.error('Diga o que precisa ser pago');
+    if (!valor) return toast.error('Informe o valor');
+    if (!dataVencimento) return toast.error('Informe quando vence');
+    if (!motivo.trim()) return toast.error('Explique o motivo do gasto');
+    if (!usuario) return toast.error('Faça login primeiro');
+
+    const valorNum = parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.'));
+    if (isNaN(valorNum) || valorNum <= 0) return toast.error('Valor inválido');
 
     setLoading(true);
-
-    const valorNum = parseFloat(
-      form.valor.replace(/[^\d,.-]/g, '').replace(',', '.'),
-    );
-    if (isNaN(valorNum) || valorNum <= 0) {
-      toast.error('Valor inválido');
-      setLoading(false);
-      return;
-    }
 
     const { data: conta, error } = await supabase
       .from('contas_pagar')
       .insert({
-        descricao: form.descricao.trim(),
-        categoria: form.categoria || null,
+        descricao: descricao.trim(),
+        categoria: categoria || null,
         valor: valorNum,
-        motivo: form.motivo.trim(),
-        observacoes: form.observacoes.trim() || null,
-        comprovante_url: form.comprovante_url.trim() || null,
+        motivo: motivo.trim(),
         status: 'Lancada',
-        criado_por: criadoPor,
-        data_vencimento: jaPaguei ? form.data_pagamento : form.data_vencimento,
-        data_pagamento: jaPaguei ? form.data_pagamento : null,
-        forma_pagamento: (jaPaguei && form.forma_pagamento) ? form.forma_pagamento : null,
-        chave_pix: form.forma_pagamento === 'PIX' && form.chave_pix.trim() ? form.chave_pix.trim() : null,
-        recorrente: form.recorrente,
-        dia_vencimento_recorrente: form.recorrente && form.dia_vencimento_recorrente
-          ? parseInt(form.dia_vencimento_recorrente) : null,
+        criado_por: responsavel,
+        data_vencimento: dataVencimento,
+        recorrente,
+        dia_vencimento_recorrente: recorrente && diaRecorrente ? parseInt(diaRecorrente) : null,
       } as any)
       .select('id')
       .single();
@@ -112,16 +67,13 @@ export default function NovaContaPage() {
 
     await supabase.from('contas_pagar_logs').insert({
       conta_id: conta.id,
-      usuario_id: criadoPor,
+      usuario_id: responsavel,
       acao: 'CRIADA',
       status_anterior: null,
       status_novo: 'Lancada',
-      observacao: jaPaguei ? 'Registrado como já pago pelo lançador' : null,
     });
 
-    toast.success(
-      jaPaguei ? 'Pagamento registrado com sucesso!' : 'Conta lançada com sucesso!',
-    );
+    toast.success('Conta registrada! Agora é só aguardar aprovação.');
     navigate('/');
     setLoading(false);
   };
@@ -130,60 +82,29 @@ export default function NovaContaPage() {
     <AppLayout>
       <div className="space-y-5 animate-fade-in">
 
-        {/* Header */}
+        {/* Cabeçalho */}
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)} className="text-muted-foreground active:scale-90">
             <ArrowLeft size={20} />
           </button>
-          <h2 className="page-title">Registrar gasto</h2>
+          <div>
+            <h2 className="page-title">Nova conta</h2>
+            <p className="page-subtitle">Registre um gasto que precisa ser pago</p>
+          </div>
         </div>
 
-        {/* Toggle: já paguei / preciso pagar */}
-        <div className="grid grid-cols-2 gap-2 p-1.5 bg-card rounded-2xl border border-border shadow-sm">
-          <button
-            onClick={() => setJaPaguei(false)}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
-              !jaPaguei
-                ? 'gradient-primary text-primary-foreground shadow-md'
-                : 'text-muted-foreground'
-            }`}
-          >
-            <Clock size={15} />
-            Preciso pagar
-          </button>
-          <button
-            onClick={() => setJaPaguei(true)}
-            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
-              jaPaguei
-                ? 'gradient-primary text-primary-foreground shadow-md'
-                : 'text-muted-foreground'
-            }`}
-          >
-            <CheckCircle2 size={15} />
-            Já paguei
-          </button>
-        </div>
-
-        {/* Card principal */}
+        {/* O que é + valor */}
         <div className="section-card space-y-4">
-          <p className="section-title">
-            {jaPaguei ? 'DADOS DO PAGAMENTO' : 'DADOS DA CONTA'}
-          </p>
-
-          {/* Descrição */}
           <div className="space-y-1.5">
-            <label className="label-micro">
-              {jaPaguei ? 'O que foi comprado / pago' : 'O que precisa ser pago'} *
-            </label>
+            <label className="label-micro">O que precisa ser pago? *</label>
             <Input
-              placeholder={jaPaguei ? 'Ex.: Impressão de panfletos zona norte' : 'Ex.: Aluguel do escritório, conta de energia...'}
-              value={form.descricao}
-              onChange={e => set('descricao', e.target.value)}
+              placeholder="Ex.: Aluguel do escritório, panfletos..."
+              value={descricao}
+              onChange={e => setDescricao(e.target.value)}
               className="form-input"
             />
           </div>
 
-          {/* Valor + Categoria */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="label-micro">Valor (R$) *</label>
@@ -191,178 +112,101 @@ export default function NovaContaPage() {
                 type="text"
                 inputMode="decimal"
                 placeholder="0,00"
-                value={form.valor}
-                onChange={e => set('valor', e.target.value)}
+                value={valor}
+                onChange={e => setValor(e.target.value)}
                 className="form-input"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="label-micro">Categoria</label>
-              <select
-                value={form.categoria}
-                onChange={e => set('categoria', e.target.value)}
-                className="form-select"
-              >
-                <option value="">Selecionar...</option>
-                {categorias.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <label className="label-micro">Quando vence? *</label>
+              <Input
+                type="date"
+                value={dataVencimento}
+                onChange={e => setDataVencimento(e.target.value)}
+                className="form-input"
+              />
             </div>
           </div>
 
-          {/* Data e forma */}
-          {jaPaguei ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="label-micro">Quando foi pago? *</label>
-                <Input
-                  type="date"
-                  value={form.data_pagamento}
-                  onChange={e => set('data_pagamento', e.target.value)}
-                  className="form-input"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="label-micro">Como foi pago?</label>
-                <select
-                  value={form.forma_pagamento}
-                  onChange={e => set('forma_pagamento', e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Selecionar...</option>
-                  {formasPagamento.map(f => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <label className="label-micro">Quando vence / precisa ser pago? *</label>
-              <Input
-                type="date"
-                value={form.data_vencimento}
-                onChange={e => set('data_vencimento', e.target.value)}
-                className="form-input"
-              />
-            </div>
-          )}
-
-          {/* Chave PIX (aparece quando forma = PIX) */}
-          {form.forma_pagamento === 'PIX' && (
-            <div className="space-y-1.5">
-              <label className="label-micro">Chave PIX para pagamento</label>
-              <Input
-                placeholder="CPF, e-mail, telefone ou chave aleatória"
-                value={form.chave_pix}
-                onChange={e => set('chave_pix', e.target.value)}
-                className="form-input"
-              />
-            </div>
-          )}
-
-          {/* Motivo */}
           <div className="space-y-1.5">
-            <label className="label-micro">
-              Por que {jaPaguei ? 'esse gasto foi necessário' : 'esse gasto é necessário'}? *
-            </label>
+            <label className="label-micro">Categoria</label>
+            <select
+              value={categoria}
+              onChange={e => setCategoria(e.target.value)}
+              className="form-select"
+            >
+              <option value="">Escolha uma categoria...</option>
+              {categorias.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="label-micro">Por que esse gasto é necessário? *</label>
             <Textarea
-              placeholder="Ex.: Impressão para evento no bairro X no dia Y..."
-              value={form.motivo}
-              onChange={e => set('motivo', e.target.value)}
-              rows={3}
-              className="bg-background rounded-xl"
+              placeholder="Ex.: Material para evento no bairro X..."
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              rows={2}
+              className="bg-background rounded-xl border border-input"
             />
           </div>
         </div>
 
-        {/* Conta recorrente */}
-        <div className="section-card space-y-4">
-          <p className="section-title flex items-center gap-2"><RefreshCw size={14} /> CONTA RECORRENTE</p>
-          <p className="text-xs text-muted-foreground">
-            Marque se essa conta se repete todo mês (ex.: aluguel, internet, salários)
-          </p>
-
+        {/* Recorrente */}
+        <div className="section-card space-y-3">
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
-              checked={form.recorrente}
-              onChange={e => set('recorrente', e.target.checked)}
+              checked={recorrente}
+              onChange={e => setRecorrente(e.target.checked)}
               className="w-5 h-5 rounded border-border accent-primary cursor-pointer"
             />
-            <span className="text-sm font-medium">Essa conta se repete todo mês</span>
+            <div>
+              <span className="text-sm font-medium flex items-center gap-1.5">
+                <RefreshCw size={14} className="text-primary" />
+                Essa conta se repete todo mês
+              </span>
+              <p className="text-[11px] text-muted-foreground">Ex.: aluguel, internet, salários</p>
+            </div>
           </label>
 
-          {form.recorrente && (
-            <div className="space-y-1.5">
+          {recorrente && (
+            <div className="space-y-1.5 pl-8">
               <label className="label-micro">Dia do vencimento mensal</label>
               <Input
                 type="number"
                 min="1"
                 max="31"
                 placeholder="Ex.: 10"
-                value={form.dia_vencimento_recorrente}
-                onChange={e => set('dia_vencimento_recorrente', e.target.value)}
-                className="form-input"
+                value={diaRecorrente}
+                onChange={e => setDiaRecorrente(e.target.value)}
+                className="form-input max-w-[120px]"
               />
-              <p className="text-micro">Dia do mês em que essa conta vence (1 a 31)</p>
             </div>
           )}
         </div>
 
-        {/* Responsável */}
-        <div className="section-card space-y-4">
-          <p className="section-title">QUEM ESTÁ REGISTRANDO</p>
-          <p className="text-xs text-muted-foreground">
-            Por padrão, será você. Altere se outra pessoa está fazendo o registro.
+        {/* Quem tá registrando */}
+        <div className="section-card space-y-3">
+          <p className="text-sm font-medium">Quem está registrando?</p>
+          <p className="text-[11px] text-muted-foreground -mt-1">
+            Já vem com seu nome. Mude só se outra pessoa pediu pra registrar.
           </p>
           <UserSelect
-            value={criadoPor}
-            onChange={v => set('criado_por', v)}
-            placeholder="Selecionar responsável..."
+            value={responsavel}
+            onChange={setCriadoPor}
+            placeholder="Selecionar pessoa..."
           />
         </div>
 
-        {/* Extras */}
-        <div className="section-card space-y-4">
-          <p className="section-title">EXTRAS (OPCIONAL)</p>
-
-          <div className="space-y-1.5">
-            <label className="label-micro">Link do comprovante / nota fiscal</label>
-            <Input
-              placeholder="https://... (foto, PDF, Google Drive...)"
-              value={form.comprovante_url}
-              onChange={e => set('comprovante_url', e.target.value)}
-              className="form-input"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="label-micro">Observações adicionais</label>
-            <Textarea
-              placeholder="Alguma informação extra que queira registrar..."
-              value={form.observacoes}
-              onChange={e => set('observacoes', e.target.value)}
-              rows={2}
-              className="bg-background rounded-xl"
-            />
-          </div>
-        </div>
-
-        {/* Ações */}
-        <div className="space-y-3 pb-4">
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="btn-primary"
-          >
-            {loading ? 'Salvando...' : jaPaguei ? 'Registrar pagamento' : 'Lançar conta'}
+        {/* Botões */}
+        <div className="space-y-3 pb-6">
+          <button onClick={handleSubmit} disabled={loading} className="btn-primary">
+            {loading ? 'Salvando...' : '✓ Registrar conta'}
           </button>
-          <button
-            onClick={() => navigate(-1)}
-            className="btn-outline"
-          >
+          <button onClick={() => navigate(-1)} className="btn-outline">
             Cancelar
           </button>
         </div>
