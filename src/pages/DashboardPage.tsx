@@ -19,7 +19,6 @@ interface ContaPagar {
   fornecedor_nome_livre: string | null;
 }
 
-// Status → label humano + cor
 const statusConfig: Record<string, { label: string; style: string }> = {
   Lancada:  { label: 'Aguardando',  style: 'bg-yellow-500/15 text-yellow-600 border-yellow-400/30' },
   Aprovada: { label: 'A pagar',     style: 'bg-blue-500/15 text-blue-600 border-blue-400/30' },
@@ -27,7 +26,6 @@ const statusConfig: Record<string, { label: string; style: string }> = {
   Cancelada:{ label: 'Cancelado',   style: 'bg-red-500/15 text-red-500 border-red-400/30' },
 };
 
-// Filtros — label humano : valor DB (array de status)
 const FILTROS = [
   { label: 'Tudo',       statuses: [] },
   { label: 'A pagar',    statuses: ['Lancada', 'Aprovada'] },
@@ -108,7 +106,6 @@ export default function DashboardPage() {
     catch { return d; }
   };
 
-  // Resumo rápido para usuário comum
   const totalAPagar = contas
     .filter(c => c.status === 'Lancada' || c.status === 'Aprovada')
     .reduce((s, c) => s + Number(c.valor), 0);
@@ -117,19 +114,19 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-5 animate-fade-in">
 
         {/* Título */}
         <div>
-          <h2 className="text-xl font-bold">
+          <h2 className="page-title">
             {isAdmin ? 'Todas as contas' : 'Minhas contas'}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="page-subtitle">
             {isAdmin ? 'Visão geral de todos os lançamentos' : 'Seus gastos registrados'}
           </p>
         </div>
 
-        {/* Resumo rápido — admin vê stats detalhadas, usuário comum vê resumo simples */}
+        {/* Resumo */}
         {isAdmin ? (
           <div className="grid grid-cols-2 gap-3">
             {[
@@ -138,7 +135,7 @@ export default function DashboardPage() {
               { label: 'Atrasados', value: stats.vencidas, color: 'text-red-500' },
               { label: 'Pago este mês', value: stats.pagasMes, color: 'text-green-500' },
             ].map(s => (
-              <div key={s.label} className="section-card !p-3">
+              <div key={s.label} className="section-card !p-4">
                 <p className="label-micro">{s.label}</p>
                 <p className={cn('text-lg font-bold tabular-nums', s.color)}>{fmt(s.value)}</p>
               </div>
@@ -168,9 +165,9 @@ export default function DashboardPage() {
               key={f.label}
               onClick={() => setFiltroIdx(idx)}
               className={cn(
-                'px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all active:scale-95 border',
+                'px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active:scale-95 border',
                 filtroIdx === idx
-                  ? 'gradient-primary text-primary-foreground border-transparent'
+                  ? 'gradient-primary text-primary-foreground border-transparent shadow-md'
                   : 'bg-card text-muted-foreground border-border',
               )}
             >
@@ -230,7 +227,7 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <span className={cn(
-                      'text-[10px] font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap shrink-0',
+                      'text-[10px] font-semibold px-2.5 py-1 rounded-full border whitespace-nowrap shrink-0',
                       cfg.style,
                     )}>
                       {cfg.label}

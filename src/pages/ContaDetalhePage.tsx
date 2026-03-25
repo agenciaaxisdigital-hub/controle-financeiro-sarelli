@@ -133,7 +133,7 @@ export default function ContaDetalhePage() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-5 animate-fade-in">
 
         {/* Header */}
         <div className="flex items-start gap-3">
@@ -141,9 +141,9 @@ export default function ContaDetalhePage() {
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-bold leading-tight">{conta.descricao}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full border', cfg.style)}>
+            <h2 className="page-title leading-tight">{conta.descricao}</h2>
+            <div className="flex items-center gap-2 mt-1.5">
+              <span className={cn('text-[10px] font-semibold px-2.5 py-1 rounded-full border', cfg.style)}>
                 {cfg.label}
               </span>
               <span className="text-lg font-bold text-primary tabular-nums">
@@ -153,10 +153,10 @@ export default function ContaDetalhePage() {
           </div>
         </div>
 
-        {/* Resumo */}
+        {/* Detalhes */}
         <div className="section-card">
-          <p className="section-title flex items-center gap-2"><FileText size={14} /> Detalhes</p>
-          <div className="space-y-2 text-sm">
+          <p className="section-title flex items-center gap-2"><FileText size={14} /> DETALHES</p>
+          <div className="space-y-2.5 text-sm">
             <Row label="O que é" value={conta.descricao} />
             {conta.categoria && <Row label="Categoria" value={conta.categoria} />}
             <Row label="Valor" value={fmt(Number(conta.valor))} />
@@ -167,14 +167,14 @@ export default function ContaDetalhePage() {
 
         {/* Motivo */}
         <div className="section-card">
-          <p className="section-title flex items-center gap-2"><MessageSquare size={14} /> Por que foi necessário</p>
+          <p className="section-title flex items-center gap-2"><MessageSquare size={14} /> MOTIVO</p>
           <p className="text-sm leading-relaxed">{conta.motivo}</p>
         </div>
 
-        {/* Status / fluxo */}
+        {/* Situação */}
         <div className="section-card">
-          <p className="section-title flex items-center gap-2"><Clock size={14} /> Situação</p>
-          <div className="space-y-2 text-sm">
+          <p className="section-title flex items-center gap-2"><Clock size={14} /> SITUAÇÃO</p>
+          <div className="space-y-2.5 text-sm">
             <Row label="Situação atual" value={cfg.label} />
             <Row label="Registrado em" value={fmtDateTime(conta.criado_em)} />
             {conta.data_pagamento && <Row label="Pago em" value={fmtData(conta.data_pagamento)} />}
@@ -184,7 +184,7 @@ export default function ContaDetalhePage() {
         {/* Comprovante / obs */}
         {(conta.comprovante_url || conta.observacoes) && (
           <div className="section-card">
-            <p className="section-title flex items-center gap-2"><Paperclip size={14} /> Comprovante e Observações</p>
+            <p className="section-title flex items-center gap-2"><Paperclip size={14} /> COMPROVANTE E OBSERVAÇÕES</p>
             {conta.comprovante_url && (
               <a href={conta.comprovante_url} target="_blank" rel="noopener"
                 className="text-sm text-primary underline break-all block">
@@ -200,10 +200,10 @@ export default function ContaDetalhePage() {
         {/* Histórico */}
         {logs.length > 0 && (
           <div className="section-card">
-            <p className="section-title flex items-center gap-2"><History size={14} /> Histórico</p>
+            <p className="section-title flex items-center gap-2"><History size={14} /> HISTÓRICO</p>
             <div className="space-y-2">
               {logs.map(log => (
-                <div key={log.id} className="text-xs border-l-2 border-border pl-3 py-1">
+                <div key={log.id} className="text-xs border-l-2 border-primary/30 pl-3 py-1.5">
                   <p className="text-muted-foreground">{fmtDateTime(log.criado_em)}</p>
                   <p className="font-medium">
                     {acaoLabel[log.acao] ?? log.acao}
@@ -226,14 +226,14 @@ export default function ContaDetalhePage() {
         {/* Ações — somente admin */}
         {isAdmin && (conta.status === 'Lancada' || conta.status === 'Aprovada') && (
           <div className="section-card">
-            <p className="section-title">Ações</p>
+            <p className="section-title">AÇÕES</p>
             <div className="space-y-3">
               {conta.status === 'Lancada' && (
                 <>
                   <Button
                     onClick={() => changeStatus('Aprovada')}
                     disabled={actionLoading}
-                    className="w-full h-11 gradient-primary text-primary-foreground font-semibold rounded-xl"
+                    className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
                   >
                     <Check size={16} className="mr-2" /> Aprovar conta
                   </Button>
@@ -241,7 +241,7 @@ export default function ContaDetalhePage() {
                     variant="outline"
                     onClick={() => changeStatus('Cancelada')}
                     disabled={actionLoading}
-                    className="w-full h-11 text-destructive border-destructive/30 rounded-xl"
+                    className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
                   >
                     <X size={16} className="mr-2" /> Recusar / Cancelar
                   </Button>
@@ -253,7 +253,7 @@ export default function ContaDetalhePage() {
                   <div className="space-y-1.5">
                     <label className="label-micro">Como foi / será pago?</label>
                     <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                      <SelectTrigger className="h-11 bg-background">
+                      <SelectTrigger className="h-12 bg-background rounded-xl">
                         <SelectValue placeholder="Selecione a forma de pagamento" />
                       </SelectTrigger>
                       <SelectContent>
@@ -264,7 +264,7 @@ export default function ContaDetalhePage() {
                   <Button
                     onClick={() => changeStatus('Paga')}
                     disabled={actionLoading}
-                    className="w-full h-11 gradient-primary text-primary-foreground font-semibold rounded-xl"
+                    className="w-full h-12 gradient-primary text-primary-foreground font-semibold rounded-xl"
                   >
                     <CreditCard size={16} className="mr-2" /> Confirmar pagamento
                   </Button>
@@ -272,7 +272,7 @@ export default function ContaDetalhePage() {
                     variant="outline"
                     onClick={() => changeStatus('Cancelada')}
                     disabled={actionLoading}
-                    className="w-full h-11 text-destructive border-destructive/30 rounded-xl"
+                    className="w-full h-12 text-destructive border-destructive/30 rounded-xl"
                   >
                     <X size={16} className="mr-2" /> Cancelar
                   </Button>

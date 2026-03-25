@@ -129,16 +129,16 @@ export default function NovaContaPage() {
           <button onClick={() => navigate(-1)} className="text-muted-foreground active:scale-90">
             <ArrowLeft size={20} />
           </button>
-          <h2 className="text-xl font-bold">Registrar gasto</h2>
+          <h2 className="page-title">Registrar gasto</h2>
         </div>
 
         {/* Toggle: já paguei / preciso pagar */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
+        <div className="grid grid-cols-2 gap-2 p-1.5 bg-card rounded-2xl border border-border shadow-sm">
           <button
             onClick={() => setJaPaguei(false)}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
               !jaPaguei
-                ? 'bg-card text-foreground shadow-sm'
+                ? 'gradient-primary text-primary-foreground shadow-md'
                 : 'text-muted-foreground'
             }`}
           >
@@ -147,9 +147,9 @@ export default function NovaContaPage() {
           </button>
           <button
             onClick={() => setJaPaguei(true)}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold transition-all ${
               jaPaguei
-                ? 'bg-card text-foreground shadow-sm'
+                ? 'gradient-primary text-primary-foreground shadow-md'
                 : 'text-muted-foreground'
             }`}
           >
@@ -160,11 +160,14 @@ export default function NovaContaPage() {
 
         {/* Card principal */}
         <div className="section-card space-y-4">
+          <p className="section-title">
+            {jaPaguei ? 'DADOS DO PAGAMENTO' : 'DADOS DA CONTA'}
+          </p>
 
           {/* Descrição */}
           <div className="space-y-1.5">
             <label className="label-micro">
-              O que {jaPaguei ? 'foi comprado / pago' : 'precisa ser pago'} *
+              {jaPaguei ? 'O que foi comprado / pago' : 'O que precisa ser pago'} *
             </label>
             <Input
               placeholder={
@@ -174,7 +177,7 @@ export default function NovaContaPage() {
               }
               value={form.descricao}
               onChange={e => set('descricao', e.target.value)}
-              className="h-12 bg-background"
+              className="form-input"
             />
           </div>
 
@@ -188,7 +191,7 @@ export default function NovaContaPage() {
                 placeholder="0,00"
                 value={form.valor}
                 onChange={e => set('valor', e.target.value)}
-                className="h-12 bg-background"
+                className="form-input"
               />
             </div>
             <div className="space-y-1.5">
@@ -196,7 +199,7 @@ export default function NovaContaPage() {
               <select
                 value={form.categoria}
                 onChange={e => set('categoria', e.target.value)}
-                className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                className="form-select"
               >
                 <option value="">Selecionar...</option>
                 {categorias.map(c => (
@@ -206,7 +209,7 @@ export default function NovaContaPage() {
             </div>
           </div>
 
-          {/* Data e forma — muda conforme o toggle */}
+          {/* Data e forma */}
           {jaPaguei ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
@@ -215,7 +218,7 @@ export default function NovaContaPage() {
                   type="date"
                   value={form.data_pagamento}
                   onChange={e => set('data_pagamento', e.target.value)}
-                  className="h-12 bg-background"
+                  className="form-input"
                 />
               </div>
               <div className="space-y-1.5">
@@ -223,7 +226,7 @@ export default function NovaContaPage() {
                 <select
                   value={form.forma_pagamento}
                   onChange={e => set('forma_pagamento', e.target.value)}
-                  className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  className="form-select"
                 >
                   <option value="">Selecionar...</option>
                   {formasPagamento.map(f => (
@@ -239,7 +242,7 @@ export default function NovaContaPage() {
                 type="date"
                 value={form.data_vencimento}
                 onChange={e => set('data_vencimento', e.target.value)}
-                className="h-12 bg-background"
+                className="form-input"
               />
             </div>
           )}
@@ -250,11 +253,11 @@ export default function NovaContaPage() {
               Por que {jaPaguei ? 'esse gasto foi necessário' : 'esse gasto é necessário'}? *
             </label>
             <Textarea
-              placeholder="Ex.: Impressão para evento no bairro X no dia Y, aluguel do espaço para reunião de equipe..."
+              placeholder="Ex.: Impressão para evento no bairro X no dia Y..."
               value={form.motivo}
               onChange={e => set('motivo', e.target.value)}
               rows={3}
-              className="bg-background"
+              className="bg-background rounded-xl"
             />
           </div>
         </div>
@@ -269,7 +272,7 @@ export default function NovaContaPage() {
               placeholder="https://... (foto, PDF, Google Drive...)"
               value={form.comprovante_url}
               onChange={e => set('comprovante_url', e.target.value)}
-              className="h-12 bg-background"
+              className="form-input"
             />
           </div>
 
@@ -280,7 +283,7 @@ export default function NovaContaPage() {
               value={form.observacoes}
               onChange={e => set('observacoes', e.target.value)}
               rows={2}
-              className="bg-background"
+              className="bg-background rounded-xl"
             />
           </div>
         </div>
@@ -290,13 +293,13 @@ export default function NovaContaPage() {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full h-12 rounded-xl font-semibold text-primary-foreground gradient-primary shadow-lg active:scale-[0.97] transition-transform disabled:opacity-60"
+            className="btn-primary"
           >
             {loading ? 'Salvando...' : jaPaguei ? 'Registrar pagamento' : 'Lançar conta'}
           </button>
           <button
             onClick={() => navigate(-1)}
-            className="w-full h-12 rounded-xl font-medium text-muted-foreground bg-transparent border border-border"
+            className="btn-outline"
           >
             Cancelar
           </button>

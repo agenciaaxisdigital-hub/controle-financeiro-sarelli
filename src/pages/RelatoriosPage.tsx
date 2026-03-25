@@ -51,7 +51,6 @@ export default function RelatoriosPage() {
     return (c.status === 'Lancada' || c.status === 'Aprovada') && new Date(c.data_vencimento) < new Date();
   }).reduce((s, c) => s + Number(c.valor), 0);
 
-  // Group by category
   const byCategory: Record<string, number> = {};
   filtered.forEach(c => {
     const cat = c.categoria || 'Sem categoria';
@@ -74,33 +73,36 @@ export default function RelatoriosPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-4 animate-fade-in">
+      <div className="space-y-5 animate-fade-in">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2"><BarChart3 size={20} /> Relatórios</h2>
-          <p className="text-sm text-muted-foreground">Visão geral financeira da campanha</p>
+          <h2 className="page-title flex items-center gap-2"><BarChart3 size={22} /> Relatórios</h2>
+          <p className="page-subtitle">Visão geral financeira da campanha</p>
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="label-micro">Categoria</label>
-            <Select value={catFilter} onValueChange={setCatFilter}>
-              <SelectTrigger className="h-10 bg-card"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <label className="label-micro">Status</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10 bg-card"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {['Todos', 'Lancada', 'Aprovada', 'Paga', 'Cancelada'].map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="section-card">
+          <p className="section-title">FILTROS</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="label-micro">Categoria</label>
+              <Select value={catFilter} onValueChange={setCatFilter}>
+                <SelectTrigger className="h-12 bg-background rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {categorias.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="label-micro">Status</label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-12 bg-background rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {['Todos', 'Lancada', 'Aprovada', 'Paga', 'Cancelada'].map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -108,11 +110,11 @@ export default function RelatoriosPage() {
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: 'Total lançado', value: totalLancado, color: 'text-foreground' },
-            { label: 'Total pago', value: totalPago, color: 'text-green-400' },
-            { label: 'Em aberto', value: totalAberto, color: 'text-yellow-400' },
-            { label: 'Vencido', value: totalVencido, color: 'text-red-400' },
+            { label: 'Total pago', value: totalPago, color: 'text-green-500' },
+            { label: 'Em aberto', value: totalAberto, color: 'text-yellow-500' },
+            { label: 'Vencido', value: totalVencido, color: 'text-red-500' },
           ].map(s => (
-            <div key={s.label} className="section-card !p-3">
+            <div key={s.label} className="section-card !p-4">
               <p className="label-micro">{s.label}</p>
               <p className={cn('text-lg font-bold tabular-nums', s.color)}>{fmt(s.value)}</p>
             </div>
@@ -121,7 +123,7 @@ export default function RelatoriosPage() {
 
         {/* By category */}
         <div className="section-card">
-          <p className="section-title">Por Categoria</p>
+          <p className="section-title">POR CATEGORIA</p>
           {loading ? (
             <div className="animate-pulse space-y-2">
               {[1, 2, 3].map(i => <div key={i} className="h-6 bg-muted rounded" />)}
@@ -136,7 +138,7 @@ export default function RelatoriosPage() {
                     <span className="text-muted-foreground">{cat}</span>
                     <span className="font-medium tabular-nums">{fmt(val)}</span>
                   </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full gradient-primary rounded-full transition-all duration-500"
                       style={{ width: `${(val / maxCatVal) * 100}%` }}
