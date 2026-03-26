@@ -1,41 +1,84 @@
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { ArrowLeft, RefreshCw, HelpCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, HelpCircle, ChevronDown } from 'lucide-react';
+import { format } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
 import UserSelect from '@/components/UserSelect';
 
-const categorias = [
-  'Material gráfico', 'Combustível', 'Pessoal', 'Aluguel',
-  'Mídia digital', 'Mídia tradicional (rádio/TV)', 'Eventos',
-  'Serviços (jurídico, contábil, etc.)', 'Outros',
+// Categorias sugeridas — o usuário também pode digitar qualquer outra
+const CATEGORIAS_SUGERIDAS = [
+  'Aluguel', 'Água / Luz / Gás', 'Internet / Telefone',
+  'Material de escritório', 'Serviços (jurídico, contábil, etc.)',
+  'Pessoal / Salários', 'Combustível', 'Manutenção',
+  'Material gráfico', 'Mídia digital', 'Mídia tradicional (rádio/TV)',
+  'Eventos', 'Equipamentos', 'Impostos / Taxas', 'Outros',
 ];
+
+const MESES_RECORRENCIA = [
+  { value: '3', label: '3 meses' },
+  { value: '6', label: '6 meses' },
+  { value: '12', label: '12 meses' },
+  { value: '24', label: '2 anos' },
+  { value: '0', label: 'Sem data de fim (indeterminado)' },
+];
+
+const fmt = (v: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+const parseBRL = (s: string) =>
+  parseFloat(s.replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, ''));
 
 export default function NovaContaPage() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
+  const listId = useId();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
 
+  // Passo 1
   const [descricao, setDescricao] = useState('');
-  const [valor, setValor] = useState('');
+  const [valorRaw, setValorRaw] = useState('');
   const [categoria, setCategoria] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
-  const [motivo, setMotivo] = useState('');
   const [recorrente, setRecorrente] = useState(false);
   const [diaRecorrente, setDiaRecorrente] = useState('');
+  const [mesesRecorrencia, setMesesRecorrencia] = useState('12');
+
+  // Passo 2
+  const [motivo, setMotivo] = useState('');
   const [criadoPor, setCriadoPor] = useState('');
 
   const responsavel = criadoPor || usuario?.id || '';
 
+  // Formata o valor enquanto digita (BRL)
+  const handleValor = (raw: string) => {
+    const nums = raw.replace(/\D/g, '');
+    if (!nums) { setValorRaw(''); return; }
+    const cents = parseInt(nums, 10);
+    const brl = (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    setValorRaw(brl);
+  };
+
+  const valorNum = parseBRL(valorRaw);
+
+  // Data de fim da recorrência
+  const recorrenteAte = (() => {
+    if (!recorrente || mesesRecorrencia === '0') return null;
+    const base = dataVencimento ? new Date(dataVencimento + 'T00:00:00') : new Date();
+    base.setMonth(base.getMonth() + parseInt(mesesRecorrencia));
+    return format(base, 'yyyy-MM-dd');
+  })();
+
   const goStep2 = () => {
     if (!descricao.trim()) return toast.error('Diga o que precisa ser pago');
-    if (!valor) return toast.error('Informe o valor');
+    if (!valorRaw || isNaN(valorNum) || valorNum <= 0) return toast.error('Informe o valor corretamente');
     if (!dataVencimento) return toast.error('Informe quando vence');
+    if (recorrente && !diaRecorrente) return toast.error('Informe o dia mensal do vencimento');
     setStep(2);
   };
 
@@ -43,24 +86,28 @@ export default function NovaContaPage() {
     if (!motivo.trim()) return toast.error('Explique o motivo do gasto');
     if (!usuario) return toast.error('Faça login primeiro');
 
-    const valorNum = parseFloat(valor.replace(/[^\d,.-]/g, '').replace(',', '.'));
-    if (isNaN(valorNum) || valorNum <= 0) return toast.error('Valor inválido');
-
     setLoading(true);
+
+    const payload: Record<string, any> = {
+      descricao: descricao.trim(),
+      categoria: categoria.trim() || null,
+      valor: valorNum,
+      motivo: motivo.trim(),
+      status: 'Lancada',
+      criado_por: responsavel,
+      data_vencimento: dataVencimento,
+      recorrente,
+      dia_vencimento_recorrente: recorrente && diaRecorrente ? parseInt(diaRecorrente) : null,
+    };
+
+    // Armazena data de fim da recorrência em observacoes (campo JSON interno)
+    if (recorrente && recorrenteAte) {
+      payload.observacoes = `recorrente_ate:${recorrenteAte}`;
+    }
 
     const { data: conta, error } = await supabase
       .from('contas_pagar')
-      .insert({
-        descricao: descricao.trim(),
-        categoria: categoria || null,
-        valor: valorNum,
-        motivo: motivo.trim(),
-        status: 'Lancada',
-        criado_por: responsavel,
-        data_vencimento: dataVencimento,
-        recorrente,
-        dia_vencimento_recorrente: recorrente && diaRecorrente ? parseInt(diaRecorrente) : null,
-      } as any)
+      .insert(payload as any)
       .select('id')
       .single();
 
@@ -89,18 +136,21 @@ export default function NovaContaPage() {
 
         {/* Cabeçalho */}
         <div className="flex items-center gap-3">
-          <button onClick={() => step === 2 ? setStep(1) : navigate(-1)} className="text-muted-foreground active:scale-90">
+          <button
+            onClick={() => step === 2 ? setStep(1) : navigate(-1)}
+            className="text-muted-foreground active:scale-90 p-1"
+          >
             <ArrowLeft size={20} />
           </button>
           <div className="flex-1">
             <h2 className="page-title">Nova conta</h2>
             <p className="page-subtitle">
-              {step === 1 ? 'Passo 1 de 2 — Dados básicos' : 'Passo 2 de 2 — Detalhes'}
+              {step === 1 ? 'Passo 1 de 2 — Dados da conta' : 'Passo 2 de 2 — Justificativa'}
             </p>
           </div>
         </div>
 
-        {/* Indicador de progresso */}
+        {/* Barra de progresso */}
         <div className="flex gap-2">
           <div className="h-1.5 flex-1 rounded-full bg-primary" />
           <div className={`h-1.5 flex-1 rounded-full transition-colors ${step === 2 ? 'bg-primary' : 'bg-muted'}`} />
@@ -108,12 +158,13 @@ export default function NovaContaPage() {
 
         {step === 1 ? (
           <>
-            {/* PASSO 1 — O básico */}
             <div className="section-card space-y-4">
+
+              {/* Descrição */}
               <div className="space-y-1.5">
                 <label className="label-micro">O que precisa ser pago? *</label>
                 <Input
-                  placeholder="Ex.: Aluguel do escritório, panfletos..."
+                  placeholder="Ex.: Aluguel, material de escritório..."
                   value={descricao}
                   onChange={e => setDescricao(e.target.value)}
                   className="form-input"
@@ -121,20 +172,21 @@ export default function NovaContaPage() {
                 />
               </div>
 
+              {/* Valor + Vencimento */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="label-micro">Valor (R$) *</label>
                   <Input
                     type="text"
-                    inputMode="decimal"
+                    inputMode="numeric"
                     placeholder="0,00"
-                    value={valor}
-                    onChange={e => setValor(e.target.value)}
+                    value={valorRaw}
+                    onChange={e => handleValor(e.target.value)}
                     className="form-input"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="label-micro">Quando vence? *</label>
+                  <label className="label-micro">Vencimento *</label>
                   <Input
                     type="date"
                     value={dataVencimento}
@@ -144,22 +196,30 @@ export default function NovaContaPage() {
                 </div>
               </div>
 
+              {/* Categoria — livre com sugestões */}
               <div className="space-y-1.5">
                 <label className="label-micro">Categoria</label>
-                <select
-                  value={categoria}
-                  onChange={e => setCategoria(e.target.value)}
-                  className="form-select"
-                >
-                  <option value="">Escolha uma categoria...</option>
-                  {categorias.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Input
+                    list={listId}
+                    placeholder="Digite ou escolha uma categoria..."
+                    value={categoria}
+                    onChange={e => setCategoria(e.target.value)}
+                    className="form-input pr-8"
+                    autoComplete="off"
+                  />
+                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                </div>
+                <datalist id={listId}>
+                  {CATEGORIAS_SUGERIDAS.map(c => <option key={c} value={c} />)}
+                </datalist>
+                <p className="text-[10px] text-muted-foreground">
+                  Escolha uma sugestão ou escreva qualquer nome.
+                </p>
               </div>
             </div>
 
-            {/* Recorrente */}
+            {/* Recorrência */}
             <div className="section-card space-y-3">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -171,24 +231,53 @@ export default function NovaContaPage() {
                 <div>
                   <span className="text-sm font-medium flex items-center gap-1.5">
                     <RefreshCw size={14} className="text-primary" />
-                    Conta mensal fixa
+                    Conta mensal fixa (recorrente)
                   </span>
                   <p className="text-[11px] text-muted-foreground">Ex.: aluguel, internet, salários</p>
                 </div>
               </label>
 
               {recorrente && (
-                <div className="space-y-1.5 pl-8">
-                  <label className="label-micro">Dia do vencimento todo mês</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="31"
-                    placeholder="Ex.: 10"
-                    value={diaRecorrente}
-                    onChange={e => setDiaRecorrente(e.target.value)}
-                    className="form-input max-w-[120px]"
-                  />
+                <div className="pl-8 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="label-micro">Dia todo mês *</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="Ex.: 10"
+                        value={diaRecorrente}
+                        onChange={e => setDiaRecorrente(e.target.value)}
+                        className="form-input"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="label-micro">Duração</label>
+                      <select
+                        value={mesesRecorrencia}
+                        onChange={e => setMesesRecorrencia(e.target.value)}
+                        className="form-select"
+                      >
+                        {MESES_RECORRENCIA.map(m => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {recorrenteAte && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-50 border border-blue-200 text-xs text-blue-700">
+                      <RefreshCw size={12} />
+                      <span>Recorrente até <strong>{recorrenteAte.split('-').reverse().join('/')}</strong></span>
+                    </div>
+                  )}
+                  {mesesRecorrencia === '0' && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-yellow-50 border border-yellow-200 text-xs text-yellow-700">
+                      <RefreshCw size={12} />
+                      <span>Sem data de fim — recorrência indeterminada</span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -199,7 +288,7 @@ export default function NovaContaPage() {
           </>
         ) : (
           <>
-            {/* PASSO 2 — Motivo + responsável */}
+            {/* PASSO 2 */}
             <div className="section-card space-y-4">
               <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-blue-50 border border-blue-200">
                 <HelpCircle size={16} className="text-blue-500 mt-0.5 shrink-0" />
@@ -211,7 +300,7 @@ export default function NovaContaPage() {
               <div className="space-y-1.5">
                 <label className="label-micro">Por que esse gasto é necessário? *</label>
                 <Textarea
-                  placeholder="Ex.: Material para evento no bairro X no dia Y..."
+                  placeholder="Ex.: Aluguel do mês de março do consultório..."
                   value={motivo}
                   onChange={e => setMotivo(e.target.value)}
                   rows={3}
@@ -224,7 +313,7 @@ export default function NovaContaPage() {
             <div className="section-card space-y-3">
               <p className="text-sm font-medium">Quem está registrando?</p>
               <p className="text-[11px] text-muted-foreground -mt-1">
-                Já vem com seu nome. Mude só se outra pessoa pediu pra registrar.
+                Já está com seu nome. Mude somente se está registrando por outra pessoa.
               </p>
               <UserSelect
                 value={responsavel}
@@ -233,21 +322,21 @@ export default function NovaContaPage() {
               />
             </div>
 
-            {/* Resumo antes de salvar */}
+            {/* Resumo */}
             <div className="section-card !space-y-2 bg-muted/30">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resumo</p>
-              <div className="text-sm space-y-1">
+              <div className="text-sm space-y-1.5">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">O quê</span>
-                  <span className="font-medium truncate ml-4 text-right">{descricao}</span>
+                  <span className="font-medium truncate ml-4 text-right max-w-[55%]">{descricao}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Valor</span>
-                  <span className="font-bold text-primary">R$ {valor}</span>
+                  <span className="font-bold text-primary">{fmt(valorNum)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Vencimento</span>
-                  <span className="font-medium">{dataVencimento}</span>
+                  <span className="font-medium">{dataVencimento.split('-').reverse().join('/')}</span>
                 </div>
                 {categoria && (
                   <div className="flex justify-between">
@@ -258,7 +347,10 @@ export default function NovaContaPage() {
                 {recorrente && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Recorrente</span>
-                    <span className="font-medium">Todo dia {diaRecorrente || '—'}</span>
+                    <span className="font-medium text-right">
+                      Todo dia {diaRecorrente}
+                      {recorrenteAte ? ` até ${recorrenteAte.split('-').reverse().join('/')}` : ' (indeterminado)'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -269,7 +361,7 @@ export default function NovaContaPage() {
                 {loading ? 'Salvando...' : '✓ Registrar conta'}
               </button>
               <button onClick={() => setStep(1)} className="btn-outline">
-                ← Voltar ao passo 1
+                ← Voltar
               </button>
             </div>
           </>

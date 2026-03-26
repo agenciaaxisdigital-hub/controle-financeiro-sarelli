@@ -1,65 +1,113 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, PlusCircle, BarChart3, User } from 'lucide-react';
+import { Home, PlusCircle, BarChart3, User, TrendingUp, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
-
-const navItems = [
-  { path: '/', icon: Home, label: 'Início' },
-  { path: '/nova-conta', icon: PlusCircle, label: 'Nova' },
-  { path: '/relatorios', icon: BarChart3, label: 'Relatórios', adminOnly: true },
-  { path: '/perfil', icon: User, label: 'Perfil' },
-];
+import InstallPWA from '@/components/InstallPWA';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const [swUpdate, setSwUpdate] = useState(false);
 
-  const filteredNav = navItems.filter(item => !item.adminOnly || isAdmin);
+  // Detecta atualização do service worker
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            setSwUpdate(true);
+          }
+        });
+      });
+    });
+  }, []);
+
+  const navItems = [
+    { path: '/', icon: Home, label: 'Início' },
+    { path: '/nova-conta', icon: PlusCircle, label: 'Nova' },
+    ...(isAdmin ? [
+      { path: '/admin', icon: TrendingUp, label: 'Gestão' },
+      { path: '/admin/relatorio', icon: BarChart3, label: 'Relatório' },
+      { path: '/admin/usuarios', icon: Users, label: 'Equipe' },
+    ] : []),
+    { path: '/perfil', icon: User, label: 'Perfil' },
+  ];
 
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col" style={{ paddingBottom: "calc(64px + env(safe-area-inset-bottom, 0px))" }}>
-      {/* Top gradient line */}
+
+      {/* Barra superior gradiente */}
       <div className="bg-gradient-to-r from-primary via-rose-400 to-pink-300 h-1 sticky top-0 z-50" />
+
+      {/* Aviso de atualização do app */}
+      {swUpdate && (
+        <div className="sticky top-1 z-50 mx-4 mt-1">
+          <div className="bg-primary text-primary-foreground rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg text-sm font-medium">
+            <span>Nova versão disponível!</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="ml-3 underline font-bold text-xs"
+            >
+              Atualizar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header className="sticky top-1 z-40 bg-card border-b border-border px-4 py-3 shadow-sm">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-rose-400 flex items-center justify-center shadow-md">
-              <span className="text-xs font-bold text-primary-foreground">FS</span>
+              <span className="text-xs font-black text-primary-foreground">FS</span>
             </div>
             <div>
               <h1 className="text-sm font-bold text-foreground leading-tight">Controle Financeiro</h1>
               <p className="text-[11px] text-muted-foreground">Dra. Fernanda Sarelli</p>
             </div>
           </div>
+          {isAdmin && (
+            <span className="text-[9px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+              Admin
+            </span>
+          )}
         </div>
       </header>
 
-      {/* Content */}
+      {/* Conteúdo */}
       <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-5 pb-24 hide-scrollbar">
         {children}
       </main>
 
+      {/* Prompt de instalação PWA */}
+      <InstallPWA />
+
       {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-        <div className="max-w-app mx-auto flex justify-around items-center h-16">
-          {filteredNav.map(item => {
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border shadow-[0_-2px_10px_rgba(0,0,0,0.04)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="max-w-2xl mx-auto flex justify-around items-center h-16">
+          {navItems.map(item => {
             const active = location.pathname === item.path;
             return (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={cn(
-                  'flex flex-col items-center gap-0.5 py-2 px-3 transition-all active:scale-95',
+                  'flex flex-col items-center gap-0.5 py-2 px-3 transition-all active:scale-90 min-w-[52px]',
                   active ? 'text-primary' : 'text-muted-foreground'
                 )}
               >
                 <item.icon size={22} strokeWidth={active ? 2.5 : 1.5} />
-                <span className={cn("text-[10px]", active ? "font-bold" : "font-medium")}>{item.label}</span>
+                <span className={cn('text-[9px] leading-none', active ? 'font-bold' : 'font-medium')}>
+                  {item.label}
+                </span>
               </button>
             );
           })}

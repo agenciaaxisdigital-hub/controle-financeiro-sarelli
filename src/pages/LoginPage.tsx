@@ -5,7 +5,6 @@ import Hyperspeed from '@/components/Hyperspeed';
 import { toast } from 'sonner';
 
 const APP_TITLE = 'Financeiro';
-const FOTO_URL = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699400706d955b03c8c19827/16e72069d_WhatsAppImage2026-02-17at023641.jpeg';
 
 const hyperspeedPreset = {
   onSpeedUp: () => {}, onSlowDown: () => {},
@@ -71,11 +70,9 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm space-y-6 relative z-10 brand-fade-up">
         <div className="text-center space-y-3">
-          <div className="relative mx-auto w-28 h-28 brand-float-slow">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-pink-500 to-rose-400 p-[3px]">
-              <div className="w-full h-full rounded-full overflow-hidden bg-black">
-                <img src={FOTO_URL} alt="Dra. Fernanda Sarelli" className="w-full h-full object-cover" loading="eager" />
-              </div>
+          <div className="relative mx-auto w-24 h-24 brand-float-slow">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-pink-500 to-rose-400 flex items-center justify-center shadow-[0_0_40px_rgba(236,72,153,0.4)]">
+              <span className="text-3xl font-black text-white tracking-tight">FS</span>
             </div>
             <div className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-black brand-pulse-glow" />
           </div>
@@ -162,11 +159,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="text-center space-y-1">
-          <p className="text-[10px] text-white/25">Pré-candidata a Deputada Estadual — GO 2026</p>
-          <a href="https://drafernandasarelli.com.br" target="_blank" rel="noopener noreferrer" className="text-[10px] text-pink-500/50 hover:text-pink-400 transition-colors">
-            drafernandasarelli.com.br
-          </a>
+        <div className="text-center">
+          <p className="text-[10px] text-white/25">Controle Financeiro do Escritório · v2.0</p>
         </div>
       </div>
     </div>
