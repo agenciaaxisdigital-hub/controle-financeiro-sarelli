@@ -1,23 +1,14 @@
-import { useState, useId } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { ArrowLeft, RefreshCw, HelpCircle, ChevronDown } from 'lucide-react';
+import { ArrowLeft, RefreshCw, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import AppLayout from '@/components/AppLayout';
 import UserSelect from '@/components/UserSelect';
-
-// Categorias sugeridas — o usuário também pode digitar qualquer outra
-const CATEGORIAS_SUGERIDAS = [
-  'Aluguel', 'Água / Luz / Gás', 'Internet / Telefone',
-  'Material de escritório', 'Serviços (jurídico, contábil, etc.)',
-  'Pessoal / Salários', 'Combustível', 'Manutenção',
-  'Material gráfico', 'Mídia digital', 'Mídia tradicional (rádio/TV)',
-  'Eventos', 'Equipamentos', 'Impostos / Taxas', 'Outros',
-];
 
 const MESES_RECORRENCIA = [
   { value: '3', label: '3 meses' },
@@ -36,14 +27,13 @@ const parseBRL = (s: string) =>
 export default function NovaContaPage() {
   const { usuario } = useAuth();
   const navigate = useNavigate();
-  const listId = useId();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
 
   // Passo 1
   const [descricao, setDescricao] = useState('');
   const [valorRaw, setValorRaw] = useState('');
-  const [categoria, setCategoria] = useState('');
+  const [chavePix, setChavePix] = useState('');
   const [dataVencimento, setDataVencimento] = useState('');
   const [recorrente, setRecorrente] = useState(false);
   const [diaRecorrente, setDiaRecorrente] = useState('');
@@ -55,7 +45,6 @@ export default function NovaContaPage() {
 
   const responsavel = criadoPor || usuario?.id || '';
 
-  // Formata o valor enquanto digita (BRL)
   const handleValor = (raw: string) => {
     const nums = raw.replace(/\D/g, '');
     if (!nums) { setValorRaw(''); return; }
@@ -66,7 +55,6 @@ export default function NovaContaPage() {
 
   const valorNum = parseBRL(valorRaw);
 
-  // Data de fim da recorrência
   const recorrenteAte = (() => {
     if (!recorrente || mesesRecorrencia === '0') return null;
     const base = dataVencimento ? new Date(dataVencimento + 'T00:00:00') : new Date();
@@ -90,7 +78,6 @@ export default function NovaContaPage() {
 
     const payload: Record<string, any> = {
       descricao: descricao.trim(),
-      categoria: categoria.trim() || null,
       valor: valorNum,
       motivo: motivo.trim(),
       status: 'Lancada',
@@ -98,9 +85,9 @@ export default function NovaContaPage() {
       data_vencimento: dataVencimento,
       recorrente,
       dia_vencimento_recorrente: recorrente && diaRecorrente ? parseInt(diaRecorrente) : null,
+      chave_pix: chavePix.trim() || null,
     };
 
-    // Armazena data de fim da recorrência em observacoes (campo JSON interno)
     if (recorrente && recorrenteAte) {
       payload.observacoes = `recorrente_ate:${recorrenteAte}`;
     }
@@ -196,25 +183,18 @@ export default function NovaContaPage() {
                 </div>
               </div>
 
-              {/* Categoria — livre com sugestões */}
+              {/* Chave PIX */}
               <div className="space-y-1.5">
-                <label className="label-micro">Categoria</label>
-                <div className="relative">
-                  <Input
-                    list={listId}
-                    placeholder="Digite ou escolha uma categoria..."
-                    value={categoria}
-                    onChange={e => setCategoria(e.target.value)}
-                    className="form-input pr-8"
-                    autoComplete="off"
-                  />
-                  <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                </div>
-                <datalist id={listId}>
-                  {CATEGORIAS_SUGERIDAS.map(c => <option key={c} value={c} />)}
-                </datalist>
+                <label className="label-micro">Chave PIX (opcional)</label>
+                <Input
+                  placeholder="CPF, e-mail, telefone ou chave aleatória..."
+                  value={chavePix}
+                  onChange={e => setChavePix(e.target.value)}
+                  className="form-input"
+                  autoComplete="off"
+                />
                 <p className="text-[10px] text-muted-foreground">
-                  Escolha uma sugestão ou escreva qualquer nome.
+                  Se souber agora, já deixa aqui para facilitar na hora do pagamento.
                 </p>
               </div>
             </div>
@@ -338,10 +318,10 @@ export default function NovaContaPage() {
                   <span className="text-muted-foreground">Vencimento</span>
                   <span className="font-medium">{dataVencimento.split('-').reverse().join('/')}</span>
                 </div>
-                {categoria && (
+                {chavePix && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Categoria</span>
-                    <span className="font-medium">{categoria}</span>
+                    <span className="text-muted-foreground">Chave PIX</span>
+                    <span className="font-medium truncate ml-4 text-right max-w-[55%]">{chavePix}</span>
                   </div>
                 )}
                 {recorrente && (
