@@ -75,6 +75,14 @@ export default function ContaDetalhePage() {
     fetchUsuarios();
   }, [id]);
 
+  // Pré-preenche forma de pagamento e chave PIX quando a conta tem chave_pix salva
+  useEffect(() => {
+    if (conta?.chave_pix) {
+      setChavePix(conta.chave_pix);
+      setFormaPagamento(prev => prev || 'PIX');
+    }
+  }, [conta?.id]);
+
   const fetchUsuarios = async () => {
     const { data } = await supabase.from('usuarios').select('id, nome').order('nome');
     if (data) setUsuarios(data);
@@ -503,7 +511,7 @@ export default function ContaDetalhePage() {
 
             <div className="space-y-1.5">
               <label className="label-micro">Como foi pago? *</label>
-              <Select value={formaPagamento} onValueChange={v => { setFormaPagamento(v); setChavePix(''); setAvisoSemComprovante(false); }}>
+              <Select value={formaPagamento} onValueChange={v => { setFormaPagamento(v); setChavePix(v === 'PIX' && conta?.chave_pix ? conta.chave_pix : ''); setAvisoSemComprovante(false); }}>
                 <SelectTrigger className="h-12 bg-background rounded-xl">
                   <SelectValue placeholder="Escolha a forma..." />
                 </SelectTrigger>
@@ -516,7 +524,14 @@ export default function ContaDetalhePage() {
             {/* [FEATURE 5] Campo extra dinâmico baseado na forma de pagamento */}
             {formaPagamento && extraPagLabel[formaPagamento] && (
               <div className="space-y-1.5">
-                <label className="label-micro">{extraPagLabel[formaPagamento]}</label>
+                <div className="flex items-center justify-between">
+                  <label className="label-micro">{extraPagLabel[formaPagamento]}</label>
+                  {formaPagamento === 'PIX' && conta?.chave_pix && chavePix === conta.chave_pix && (
+                    <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">
+                      ✓ do cadastro
+                    </span>
+                  )}
+                </div>
                 <Input
                   placeholder={
                     formaPagamento === 'PIX' ? 'CPF, e-mail, telefone ou chave aleatória' :
